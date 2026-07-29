@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { isStudentAutoOff, getStudentPeriodDeposits } from "@/lib/meal-utils"
+export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,7 +17,18 @@ export async function GET(req: NextRequest) {
     const bdtNow = new Date(bdtString)
     const today = new Date(Date.UTC(bdtNow.getFullYear(), bdtNow.getMonth(), bdtNow.getDate()))
 
-    const activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true } })
+    const { searchParams } = new URL(req.url)
+    const periodId = searchParams.get("periodId")
+
+    let activePeriod = null
+    if (periodId && periodId !== "null" && periodId !== "undefined" && periodId !== "") {
+      activePeriod = await prisma.diningPeriod.findUnique({ where: { id: periodId } })
+    }
+    
+    if (!activePeriod) {
+      activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true } })
+    }
+
     let periodStart = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1))
     let periodEnd = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999))
     if (activePeriod) {

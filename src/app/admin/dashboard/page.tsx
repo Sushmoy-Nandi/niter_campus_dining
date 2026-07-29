@@ -8,14 +8,50 @@ import { Progress } from "@/components/ui/progress"
 import { Users, UtensilsCrossed, Banknote, TrendingDown, Wallet, Activity, Star, MessageSquare } from "lucide-react"
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+
 export default function AdminDashboard() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [periods, setPeriods] = useState<any[]>([])
+  const [selectedPeriodId, setSelectedPeriodId] = useState<string>("")
+
+  // Fetch available dining periods
+  useEffect(() => {
+    async function fetchPeriods() {
+      try {
+        const res = await fetch("/api/admin/settings/dining-periods")
+        if (res.ok) {
+          const data = await res.json()
+          setPeriods(data.periods || [])
+          const active = data.periods.find((p: any) => p.isActive)
+          if (active) {
+            setSelectedPeriodId(active.id)
+          } else if (data.periods.length > 0) {
+            setSelectedPeriodId(data.periods[0].id)
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch periods", error)
+      }
+    }
+    fetchPeriods()
+  }, [])
 
   useEffect(() => {
+    // Wait until a period is selected (or periods are loaded and there are none)
+    if (periods.length > 0 && !selectedPeriodId) return
+
     const fetchData = (showLoader = true) => {
       if (showLoader) setLoading(true)
-      fetch("/api/admin/dashboard")
+      
+      let url = `/api/admin/dashboard?t=${Date.now()}`
+      if (selectedPeriodId) {
+        url += `&periodId=${selectedPeriodId}`
+      }
+      
+      fetch(url, { cache: 'no-store' })
         .then((res) => res.json())
         .then(setData)
         .finally(() => { if (showLoader) setLoading(false) })
@@ -23,7 +59,7 @@ export default function AdminDashboard() {
     fetchData()
     const interval = setInterval(() => fetchData(false), 10000)
     return () => clearInterval(interval)
-  }, [])
+  }, [selectedPeriodId, periods])
 
   if (loading) {
     return (
@@ -40,9 +76,33 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
-        <p className="text-muted-foreground">Overview of the dining system</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
+          <p className="text-muted-foreground">Overview of the dining system</p>
+        </div>
+        
+        <div className="flex items-center gap-3 bg-muted/50 p-2 rounded-lg border">
+          <Label className="text-sm font-medium whitespace-nowrap hidden sm:block">Timeline:</Label>
+          <Select value={selectedPeriodId || undefined} onValueChange={(val) => setSelectedPeriodId(val || "")}>
+            <SelectTrigger className="w-[280px] bg-background">
+              <SelectValue placeholder={periods.length === 0 ? "Loading..." : "Select a timeline"}>
+                {periods.find(p => p.id === selectedPeriodId)
+                  ? `${periods.find(p => p.id === selectedPeriodId)?.title} (${new Date(periods.find(p => p.id === selectedPeriodId)?.startDate).toLocaleDateString()} - ${new Date(periods.find(p => p.id === selectedPeriodId)?.endDate).toLocaleDateString()})`
+                  : (periods.length === 0 ? "Loading..." : "Select a timeline")
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {periods.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.title} ({new Date(p.startDate).toLocaleDateString()} - {new Date(p.endDate).toLocaleDateString()})
+                  {p.isActive && " (Active)"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
