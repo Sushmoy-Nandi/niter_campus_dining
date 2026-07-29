@@ -11,22 +11,22 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const dateParam = searchParams.get("date") // Format: YYYY-MM-DD
+    const startDateParam = searchParams.get("startDate")
+    const endDateParam = searchParams.get("endDate")
     
-    // Default to today in BDT if no date provided
-    let todayStr = dateParam;
-    if (!todayStr) {
-      const bdtString = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
-      const bdtDate = new Date(bdtString);
-      const year = bdtDate.getFullYear();
-      const month = String(bdtDate.getMonth() + 1).padStart(2, '0');
-      const day = String(bdtDate.getDate()).padStart(2, '0');
-      todayStr = `${year}-${month}-${day}`;
-    }
+    const bdtString = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
+    const bdtDate = new Date(bdtString);
+    const year = bdtDate.getFullYear();
+    const month = String(bdtDate.getMonth() + 1).padStart(2, '0');
+    const day = String(bdtDate.getDate()).padStart(2, '0');
+    const defaultToday = `${year}-${month}-${day}`;
+
+    const startDateStr = startDateParam || defaultToday;
+    const endDateStr = endDateParam || startDateStr;
 
     // Set up start and end of day in BDT for querying createdAt
-    const startOfDay = new Date(todayStr + "T00:00:00.000+06:00")
-    const endOfDay = new Date(todayStr + "T23:59:59.999+06:00")
+    const startOfDay = new Date(startDateStr + "T00:00:00.000+06:00")
+    const endOfDay = new Date(endDateStr + "T23:59:59.999+06:00")
 
     const logs = await prisma.auditLog.findMany({
       where: {
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     if (activePeriod) {
       // Find all active students and their schedules for today
       const students = await prisma.student.findMany({ where: { isActive: true }, include: { wallet: true } });
-      const targetDate = new Date(todayStr);
+      const targetDate = new Date(startDateStr);
       
       const schedules = await prisma.mealSchedule.findMany({
         where: { date: targetDate }
@@ -87,7 +87,8 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json({
-      date: todayStr,
+      startDate: startDateStr,
+      endDate: endDateStr,
       stats: {
         totalScanned,
         totalFailed,
