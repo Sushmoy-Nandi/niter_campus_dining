@@ -121,6 +121,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
+    const balance = student.wallet?.balance || 0
     let projectedSpending = 0
     let dynamicMealRate = 0
 
@@ -182,7 +183,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       })
     }
 
-    const balance = student.wallet?.balance || 0
     const remainingBalance = balance - projectedSpending
 
     // Generate full timeline for UI
