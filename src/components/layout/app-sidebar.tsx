@@ -30,6 +30,7 @@ import {
   LogOut,
   MessageSquare,
   ScanLine,
+  Activity,
 } from "lucide-react"
 import { APP_NAME } from "@/lib/constants"
 
@@ -46,6 +47,7 @@ const studentNavItems = [
 const adminNavItems = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Scanner", href: "/admin/scanner", icon: ScanLine },
+  { title: "Scan Monitor", href: "/admin/scan-logs", icon: Activity },
   { title: "Students", href: "/admin/students", icon: Users },
   { title: "Deposits", href: "/admin/deposits", icon: Banknote },
   { title: "Bazaar & Rate", href: "/admin/bazaar", icon: DollarSign },
@@ -58,6 +60,7 @@ const adminNavItems = [
 const staffNavItems = [
   { title: "Meal Counts", href: "/staff/dashboard", icon: UtensilsCrossed },
   { title: "Scanner", href: "/admin/scanner", icon: ScanLine },
+  { title: "Scan Monitor", href: "/admin/scan-logs", icon: Activity },
 ]
 
 export function AppSidebar() {
