@@ -71,26 +71,26 @@ export async function POST(req: NextRequest) {
     const bdtString = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
     const bdtDate = new Date(bdtString);
     const hour = bdtDate.getHours();
-    
-    // CRITICAL FIX: If it's after midnight but before 4 AM, it is still technically yesterday's dinner!
-    if (hour < 4) {
-      bdtDate.setDate(bdtDate.getDate() - 1);
-    }
+    const minute = bdtDate.getMinutes();
     
     const year = bdtDate.getFullYear();
     const month = String(bdtDate.getMonth() + 1).padStart(2, '0');
     const day = String(bdtDate.getDate()).padStart(2, '0');
     const todayStr = `${year}-${month}-${day}`;
     
-    // Determine meal type based on time
-    // Lunch: 10:00 to 16:59
-    // Dinner: 17:00 to 23:59 (and up to 3:59 AM)
+    // Determine meal type based on time strict boundaries
+    // Lunch: 10:00 AM to 5:00 PM (10:00 to 16:59)
+    // Dinner: 7:00 PM to 11:30 PM (19:00 to 23:30) same day
     let currentMeal: "lunch" | "dinner" | null = null;
-    if (hour >= 10 && hour < 17) currentMeal = "lunch";
-    if (hour >= 17 || hour < 4) currentMeal = "dinner"; // allow until late
+    
+    if (hour >= 10 && hour < 17) {
+      currentMeal = "lunch";
+    } else if (hour >= 19 && (hour < 23 || (hour === 23 && minute <= 30))) {
+      currentMeal = "dinner";
+    }
 
     if (!currentMeal) {
-      return NextResponse.json({ error: "No active meal service at this time" }, { status: 400 })
+      return NextResponse.json({ error: "No active meal service at this time. Lunch is 10AM-5PM, Dinner is 7PM-11:30PM." }, { status: 400 })
     }
 
     // Find the schedule for today
