@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
     let monthlyMealCount = 0;
     const iterDate = new Date(periodStart);
     while (iterDate <= periodEnd) {
-      const { autoOff: dayAutoOff } = isStudentAutoOff(balance, activePeriod, iterDate);
+      const { autoOff: dayAutoOff } = isStudentAutoOff(balance, activePeriod, iterDate, periodDeposit);
       if (!dayAutoOff) {
         const year = iterDate.getFullYear();
         const month = iterDate.getMonth();

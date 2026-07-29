@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getCurrentMealRates, calculateDynamicMealRate } from "@/lib/meal-utils"
+import { getCurrentMealRates, calculateDynamicMealRate, isStudentAutoOff } from "@/lib/meal-utils"
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -141,18 +141,32 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         scheduleMap.set(new Date(meal.date).toDateString(), meal)
       })
 
+      // Fetch period deposit for auto-off logic
+      const deposits = await prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { 
+          studentId: student.id, 
+          type: "DEPOSIT",
+          createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
+        }
+      });
+      const periodDeposit = deposits._sum.amount || 0;
+
       let studentTotalMeals = 0
       const d = new Date(pStart.getTime())
       d.setHours(0, 0, 0, 0)
 
       while (d <= pEnd) {
-        const dateStr = d.toDateString()
-        const s = scheduleMap.get(dateStr)
-        if (s) {
-          if (s.lunch) studentTotalMeals += 1
-          if (s.dinner) studentTotalMeals += 1
-        } else {
-          studentTotalMeals += 2 // Default ON
+        const { autoOff: dayAutoOff } = isStudentAutoOff(balance, activePeriod, d, periodDeposit);
+        if (!dayAutoOff) {
+          const dateStr = d.toDateString()
+          const s = scheduleMap.get(dateStr)
+          if (s) {
+            if (s.lunch) studentTotalMeals += 1
+            if (s.dinner) studentTotalMeals += 1
+          } else {
+            studentTotalMeals += 2 // Default ON
+          }
         }
         d.setDate(d.getDate() + 1)
       }
