@@ -54,12 +54,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Meal auto-disabled: ${offReason}` }, { status: 403 })
     }
 
-    const now = new Date()
-    const hour = now.getHours()
+    // Get current time in Bangladesh Time (BDT)
+    const bdtString = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
+    const bdtDate = new Date(bdtString);
+    const hour = bdtDate.getHours();
+    
+    const year = bdtDate.getFullYear();
+    const month = String(bdtDate.getMonth() + 1).padStart(2, '0');
+    const day = String(bdtDate.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
     
     // Determine meal type based on time
     // Lunch: 10:00 to 16:59
-    // Dinner: 17:00 to 23:59
+    // Dinner: 17:00 to 23:59 (and up to 3:59 AM)
     let currentMeal: "lunch" | "dinner" | null = null;
     if (hour >= 10 && hour < 17) currentMeal = "lunch";
     if (hour >= 17 || hour < 4) currentMeal = "dinner"; // allow until late
@@ -68,17 +75,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No active meal service at this time" }, { status: 400 })
     }
 
-    // Get today's schedule
-    const todayStr = new Date().toISOString().split("T")[0]
-    
-    // Find the schedule for today (in local timezone equivalent)
+    // Find the schedule for today
     const schedules = await prisma.mealSchedule.findMany({
       where: { studentId: student.id }
     })
     
     const schedule = schedules.find(s => {
-       const d = new Date(s.date)
-       return d.toISOString().split("T")[0] === todayStr || d.toLocaleDateString("en-CA") === todayStr
+       const dStr = s.date.toISOString().split("T")[0]
+       return dStr === todayStr
     })
 
     if (!schedule) {
