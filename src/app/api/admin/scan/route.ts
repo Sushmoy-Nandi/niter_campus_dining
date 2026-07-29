@@ -6,7 +6,8 @@ import { isStudentAutoOff } from "@/lib/meal-utils"
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()
-    if (!session?.user?.id || (session.user as any).role !== "ADMIN") {
+    const role = (session?.user as any)?.role
+    if (!session?.user?.id || (role !== "ADMIN" && role !== "STAFF")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
