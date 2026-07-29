@@ -79,7 +79,8 @@ export function isStudentAutoOff(
       const targetStr = targetDate.toISOString().split("T")[0]
       const deadlineStr = new Date(activePeriod.depositDeadline).toISOString().split("T")[0]
       if (targetStr > deadlineStr) {
-        if (periodDeposit < activePeriod.minimumDeposit) {
+        // A student is fine if they either deposited the minimum amount this period OR already have a sufficient balance
+        if (periodDeposit < activePeriod.minimumDeposit && balance < activePeriod.minimumDeposit) {
           return { autoOff: true, reason: `Required deposit (${activePeriod.minimumDeposit} BDT) not met by deadline` }
         }
       }
