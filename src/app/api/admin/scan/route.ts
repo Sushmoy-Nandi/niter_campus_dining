@@ -12,16 +12,28 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { studentId, type } = body
+    const { studentId, diningId, type } = body
 
-    if (type !== "MEAL_CHECKIN" || !studentId) {
-      return NextResponse.json({ error: "Invalid QR code format" }, { status: 400 })
+    if (type !== "MEAL_CHECKIN") {
+      return NextResponse.json({ error: "Invalid check-in request format" }, { status: 400 })
     }
 
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-      include: { wallet: true },
-    })
+    if (!studentId && !diningId) {
+      return NextResponse.json({ error: "Must provide student ID or Dining ID" }, { status: 400 })
+    }
+
+    let student = null;
+    if (studentId) {
+      student = await prisma.student.findUnique({
+        where: { id: studentId },
+        include: { wallet: true },
+      })
+    } else if (diningId) {
+      student = await prisma.student.findFirst({
+        where: { diningId: { equals: diningId, mode: "insensitive" } },
+        include: { wallet: true },
+      })
+    }
 
     if (!student) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 })

@@ -4,8 +4,9 @@ import { useState } from "react"
 import { Scanner } from "@yudiel/react-qr-scanner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { CheckCircle2, XCircle, AlertCircle, ScanLine } from "lucide-react"
+import { CheckCircle2, XCircle, AlertCircle, ScanLine, Keyboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export default function AdminScanner() {
   const [scanResult, setScanResult] = useState<{
@@ -15,15 +16,17 @@ export default function AdminScanner() {
     meal?: string
   }>({ status: "idle" })
   const [isScanning, setIsScanning] = useState(false)
+  const [manualId, setManualId] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleScan = async (result: string) => {
-    if (scanResult.status === "processing") return;
+  const processScanData = async (data: any) => {
+    if (scanResult.status === "processing" || isSubmitting) return;
     
     setScanResult({ status: "processing" })
     setIsScanning(false)
+    setIsSubmitting(true)
     
     try {
-      const data = JSON.parse(result)
       const res = await fetch("/api/admin/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -43,21 +46,41 @@ export default function AdminScanner() {
         setScanResult({ status: "error", message: resData.error || "Unknown error" })
       }
     } catch (e) {
+      setScanResult({ status: "error", message: "Failed to connect to server." })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleScan = async (result: string) => {
+    try {
+      const data = JSON.parse(result)
+      await processScanData(data)
+    } catch (e) {
       setScanResult({ status: "error", message: "Invalid QR code format." })
     }
+  }
+
+  const handleManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!manualId.trim()) return
+    
+    const formattedId = manualId.trim().toUpperCase()
+    await processScanData({ diningId: formattedId, type: "MEAL_CHECKIN" })
+    setManualId("")
   }
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Meal Scanner</h1>
-        <p className="text-muted-foreground">Scan student QR codes to verify meal access.</p>
+        <p className="text-muted-foreground">Scan student QR codes or manually enter Dining ID.</p>
       </div>
 
       <Card>
         <CardHeader className="text-center">
-          <CardTitle>QR Code Check-in</CardTitle>
-          <CardDescription>Position the QR code within the scanner frame.</CardDescription>
+          <CardTitle>Meal Check-in</CardTitle>
+          <CardDescription>Scan QR or enter Dining ID manually.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center space-y-6">
           
@@ -90,7 +113,29 @@ export default function AdminScanner() {
             </Button>
           )}
 
-          <div className="w-full max-w-sm">
+          <div className="w-full max-w-sm flex items-center gap-4 py-2">
+            <div className="h-px bg-border flex-1" />
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">OR</span>
+            <div className="h-px bg-border flex-1" />
+          </div>
+
+          <form onSubmit={handleManualSubmit} className="w-full max-w-sm flex gap-2">
+            <div className="relative flex-1">
+              <Keyboard className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input 
+                placeholder="e.g. DIN-1005" 
+                className="pl-9" 
+                value={manualId}
+                onChange={(e) => setManualId(e.target.value)}
+                disabled={isSubmitting || isScanning}
+              />
+            </div>
+            <Button type="submit" disabled={!manualId.trim() || isSubmitting || isScanning}>
+              Check In
+            </Button>
+          </form>
+
+          <div className="w-full max-w-sm mt-4">
             {scanResult.status === "processing" && (
               <Alert>
                 <AlertCircle className="h-4 w-4" />
