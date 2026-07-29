@@ -122,8 +122,22 @@ export async function POST(req: NextRequest) {
     })
 
     if (existingScan) {
-      await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_${currentMeal.toUpperCase()}_${todayStr}`, details: `Double scan attempt` }})
-      return NextResponse.json({ error: `Student already scanned in for ${currentMeal} today!` }, { status: 409 })
+      const scanTime = new Date(existingScan.createdAt).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Dhaka",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      });
+      
+      const detailsMsg = `Double scan attempt (previously checked in at ${scanTime})`;
+      await prisma.auditLog.create({ 
+        data: { 
+          studentId: student.id, 
+          action: `FAILED_SCAN_${currentMeal.toUpperCase()}_${todayStr}`, 
+          details: detailsMsg 
+        }
+      })
+      return NextResponse.json({ error: `Student already checked in for ${currentMeal} at ${scanTime}!` }, { status: 409 })
     }
 
     // Record the scan
