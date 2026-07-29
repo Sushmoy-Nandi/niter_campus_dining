@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
     }
 
     const now = new Date()
-    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
+    // Use Bangladesh time (BDT = UTC+6) for "today" to match all other APIs
+    const bdtString = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" })
+    const bdtNow = new Date(bdtString)
+    const today = new Date(Date.UTC(bdtNow.getFullYear(), bdtNow.getMonth(), bdtNow.getDate()))
 
     const activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true } })
     let periodStart = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1))
