@@ -86,19 +86,18 @@ export async function POST(req: NextRequest) {
        return dStr === todayStr
     })
 
-    if (!schedule) {
-      await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_${currentMeal.toUpperCase()}_${todayStr}`, details: `No meal schedule found` }})
-      return NextResponse.json({ error: `No meal schedule found for today` }, { status: 403 })
-    }
-
-    if (currentMeal === "lunch" && !schedule.lunch) {
-      await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_LUNCH_${todayStr}`, details: `Lunch is turned OFF` }})
-      return NextResponse.json({ error: "Lunch is turned OFF for today" }, { status: 403 })
-    }
-    
-    if (currentMeal === "dinner" && !schedule.dinner) {
-      await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_DINNER_${todayStr}`, details: `Dinner is turned OFF` }})
-      return NextResponse.json({ error: "Dinner is turned OFF for today" }, { status: 403 })
+    // If no schedule exists, meals are ON by default.
+    // If it exists, we check if the specific meal is turned OFF.
+    if (schedule) {
+      if (currentMeal === "lunch" && !schedule.lunch) {
+        await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_LUNCH_${todayStr}`, details: `Lunch is turned OFF` }})
+        return NextResponse.json({ error: "Lunch is turned OFF for today" }, { status: 403 })
+      }
+      
+      if (currentMeal === "dinner" && !schedule.dinner) {
+        await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_DINNER_${todayStr}`, details: `Dinner is turned OFF` }})
+        return NextResponse.json({ error: "Dinner is turned OFF for today" }, { status: 403 })
+      }
     }
 
     // Prevent double scanning using AuditLog
