@@ -18,8 +18,14 @@ export const metadata: Metadata = {
   title: APP_NAME,
   description: APP_DESCRIPTION,
   manifest: "/manifest.json",
+}
+
+export const viewport = {
   themeColor: "#0F766E",
-  viewport: "minimum-scale=1, initial-scale=1, width=device-width, shrink-to-fit=no, viewport-fit=cover",
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  viewportFit: "cover",
 }
 
 export default function RootLayout({
