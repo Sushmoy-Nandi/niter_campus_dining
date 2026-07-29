@@ -62,8 +62,25 @@ export default function BazaarPage() {
     if (selectedPeriodId) {
       fetchBazaars()
       fetchSummary()
+
+      // Adjust the date input to match the selected period
+      if (periods.length > 0) {
+        const period = periods.find(p => p.id === selectedPeriodId)
+        if (period) {
+          const pStart = new Date(period.startDate)
+          const pEnd = new Date(period.endDate)
+          const today = new Date()
+          
+          if (today >= pStart && today <= pEnd) {
+             setDate(today.toLocaleDateString("en-CA"))
+          } else {
+             // Default to the end of the selected period if today is outside of it
+             setDate(pEnd.toLocaleDateString("en-CA"))
+          }
+        }
+      }
     }
-  }, [selectedPeriodId])
+  }, [selectedPeriodId, periods])
 
   async function fetchPeriods() {
     try {
@@ -143,6 +160,28 @@ export default function BazaarPage() {
     if (!date || !name || !amount) {
       toast.error("Date, Name, and Total Cost are required")
       return
+    }
+
+    const selectedPeriod = periods.find(p => p.id === selectedPeriodId)
+    if (selectedPeriod) {
+      if (selectedPeriod.isSettled) {
+        toast.error("Cannot add bazaar records to a settled timeline")
+        return
+      }
+      
+      const pStart = new Date(selectedPeriod.startDate)
+      const pEnd = new Date(selectedPeriod.endDate)
+      pStart.setHours(0,0,0,0)
+      pEnd.setHours(23,59,59,999)
+      
+      const submitDate = new Date(date)
+      // Account for local timezone offset when comparing strings
+      submitDate.setHours(12,0,0,0) // Set to noon to avoid midnight timezone shift issues
+      
+      if (submitDate < pStart || submitDate > pEnd) {
+        toast.error(`Date must fall within the selected timeline (${pStart.toLocaleDateString()} - ${pEnd.toLocaleDateString()})`)
+        return
+      }
     }
 
     try {
