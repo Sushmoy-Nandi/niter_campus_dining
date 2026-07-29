@@ -349,8 +349,6 @@ export default function StaffDashboard() {
                       <th className="px-4 py-3 font-medium">Name</th>
                       <th className="px-4 py-3 font-medium">Lunch</th>
                       <th className="px-4 py-3 font-medium">Dinner</th>
-                      <th className="px-4 py-3 font-medium text-center">G. Lunch</th>
-                      <th className="px-4 py-3 font-medium text-center">G. Dinner</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -365,7 +363,7 @@ export default function StaffDashboard() {
                       if (filteredStudents.length === 0) {
                         return (
                           <tr>
-                            <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
+                            <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                               {searchQuery ? "No matching student found." : "No active meals for this date."}
                             </td>
                           </tr>
@@ -387,8 +385,6 @@ export default function StaffDashboard() {
                               {student.dinner} {startDate === endDate && (student.dinner > 0 ? '(ON)' : '(OFF)')}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">{student.guestLunch > 0 ? student.guestLunch : "-"}</td>
-                          <td className="px-4 py-3 text-center">{student.guestDinner > 0 ? student.guestDinner : "-"}</td>
                         </tr>
                       ))
                     })()}
