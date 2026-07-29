@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { isStudentAutoOff, getStudentPeriodDeposits } from "@/lib/meal-utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
     let startDate: Date
     let endDate: Date
     let reportTitle = ""
+    let activePeriod = null;
 
     if (periodId) {
       const period = await prisma.diningPeriod.findUnique({ where: { id: periodId } })
@@ -25,12 +27,14 @@ export async function GET(req: NextRequest) {
       endDate = new Date(period.endDate)
       endDate.setUTCHours(23, 59, 59, 999)
       reportTitle = period.title
+      activePeriod = period
     } else {
       const month = parseInt(monthParam)
       const year = parseInt(yearParam)
       startDate = new Date(Date.UTC(year, month, 1))
       endDate = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999))
       reportTitle = `${year}-${String(month + 1).padStart(2, '0')}`
+      activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true }})
     }
 
     // 1. Calculate overall Meal Rate
@@ -63,25 +67,39 @@ export async function GET(req: NextRequest) {
       scheduleMap.set(`${s.studentId}-${dateStr}`, s)
     })
 
+    const periodDepositMap = await getStudentPeriodDeposits(activePeriod);
+
     let systemTotalMeals = 0
     
     // First pass: Calculate total meals for rate
     const studentStats = students.map(student => {
       let meals = 0
+      const balance = student.wallet?.balance || 0;
+      const periodDeposit = periodDepositMap.get(student.id) || 0;
       
       const d = new Date(startDate)
       while (d <= endDate) {
+        const { autoOff } = isStudentAutoOff(balance, activePeriod, d, periodDeposit);
         const year = d.getFullYear()
         const month = d.getMonth()
         const day = d.getDate()
         const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
         
         const s = scheduleMap.get(`${student.id}-${dateStr}`)
+        
+        if (!autoOff) {
+          if (s) {
+            if (s.lunch) meals += 1
+            if (s.dinner) meals += 1
+          } else {
+            meals += 2
+          }
+        }
+        
+        // Guest meals are always counted (if recorded)
         if (s) {
-          if (s.lunch) meals += 1
-          if (s.dinner) meals += 1
-        } else {
-          meals += 2
+           meals += (s.guestLunch || 0)
+           meals += (s.guestDinner || 0)
         }
         
         d.setDate(d.getDate() + 1)
