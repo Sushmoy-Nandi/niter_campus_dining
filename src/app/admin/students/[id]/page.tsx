@@ -53,6 +53,44 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
 
   const { student, projectedSpending, remainingBalance } = data
 
+  const toggleMeal = async (dateStr: string, type: "lunch" | "dinner", currentValue: boolean) => {
+    try {
+      // Optimistic update
+      const updatedSchedules = data.student.mealSchedules.map((m: any) => {
+        if (new Date(m.date).toDateString() === new Date(dateStr).toDateString()) {
+          return { ...m, [type]: !currentValue }
+        }
+        return m
+      })
+      setData({
+        ...data,
+        student: { ...data.student, mealSchedules: updatedSchedules }
+      })
+
+      const mealToUpdate = data.student.mealSchedules.find(
+        (m: any) => new Date(m.date).toDateString() === new Date(dateStr).toDateString()
+      )
+      
+      const payload = {
+        date: dateStr,
+        lunch: type === "lunch" ? !currentValue : (mealToUpdate ? mealToUpdate.lunch : true),
+        dinner: type === "dinner" ? !currentValue : (mealToUpdate ? mealToUpdate.dinner : true),
+      }
+
+      await fetch(`/api/admin/students/${id}/meals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+    } catch (e) {
+      console.error(e)
+      // On error, reload data
+      const res = await fetch(`/api/admin/students/${id}`)
+      const json = await res.json()
+      setData(json)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4 mb-4">
@@ -109,7 +147,7 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle>All Meal Status</CardTitle>
-            <CardDescription>Complete history</CardDescription>
+            <CardDescription>Click to manually edit</CardDescription>
           </CardHeader>
           <CardContent>
             {student.mealSchedules?.length ? (
@@ -127,10 +165,24 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
                       <TableRow key={meal.id}>
                         <TableCell>{new Date(meal.date).toLocaleDateString()}</TableCell>
                         <TableCell>
-                          <Badge variant={meal.lunch ? "default" : "outline"}>{meal.lunch ? "ON" : "OFF"}</Badge>
+                          <Button 
+                            variant={meal.lunch ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 px-3 text-xs"
+                            onClick={() => toggleMeal(meal.date, "lunch", meal.lunch)}
+                          >
+                            {meal.lunch ? "ON" : "OFF"}
+                          </Button>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={meal.dinner ? "default" : "outline"}>{meal.dinner ? "ON" : "OFF"}</Badge>
+                          <Button 
+                            variant={meal.dinner ? "default" : "outline"}
+                            size="sm"
+                            className="h-7 px-3 text-xs"
+                            onClick={() => toggleMeal(meal.date, "dinner", meal.dinner)}
+                          >
+                            {meal.dinner ? "ON" : "OFF"}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}

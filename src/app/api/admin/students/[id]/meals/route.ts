@@ -1,0 +1,44 @@
+import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id || (session.user as any).role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id } = await params
+    const body = await req.json()
+    const { date, lunch, dinner } = body
+
+    if (!date) {
+      return NextResponse.json({ error: "Date is required" }, { status: 400 })
+    }
+
+    const mealDate = new Date(date)
+    mealDate.setUTCHours(0, 0, 0, 0)
+
+    const schedule = await prisma.mealSchedule.upsert({
+      where: {
+        studentId_date: { studentId: id, date: mealDate },
+      },
+      update: {
+        lunch: lunch ?? true,
+        dinner: dinner ?? true,
+      },
+      create: {
+        studentId: id,
+        date: mealDate,
+        lunch: lunch ?? true,
+        dinner: dinner ?? true,
+      },
+    })
+
+    return NextResponse.json({ schedule })
+  } catch (error) {
+    console.error("Admin update meals error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
