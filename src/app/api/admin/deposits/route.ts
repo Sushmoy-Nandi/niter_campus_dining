@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { depositSchema } from "@/lib/validations"
 import { sendEmail } from "@/lib/email"
+import { isStudentAutoOff } from "@/lib/meal-utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -61,9 +62,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 })
     }
 
-    const LOW_BALANCE_THRESHOLD = 3000;
+    const activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true } })
+    let periodDeposit = 0;
+    if (activePeriod) {
+      const deposits = await prisma.transaction.aggregate({
+        _sum: { amount: true },
+        where: { 
+          studentId: student.id, 
+          type: "DEPOSIT",
+          createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
+        }
+      });
+      periodDeposit = deposits._sum.amount || 0;
+    }
+
     const oldBalance = student.wallet?.balance || 0;
     const newBalance = oldBalance + amount;
+    
+    // Check if student was auto-off before deposit
+    const { autoOff: wasAutoOff } = isStudentAutoOff(oldBalance, activePeriod, new Date(), periodDeposit);
+    // Check if student will still be auto-off after deposit
+    const { autoOff: stillAutoOff } = isStudentAutoOff(newBalance, activePeriod, new Date(), periodDeposit + amount);
 
     const result = await prisma.$transaction(async (tx) => {
       const transaction = await tx.transaction.create({
@@ -88,8 +107,8 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // Auto-turn on meals if they just crossed the threshold
-      if (oldBalance < LOW_BALANCE_THRESHOLD && newBalance >= LOW_BALANCE_THRESHOLD) {
+      // Auto-turn on meals if student was suspended but is now clear
+      if (wasAutoOff && !stillAutoOff) {
         const tomorrow = new Date()
         tomorrow.setDate(tomorrow.getDate() + 1)
         tomorrow.setHours(0, 0, 0, 0)

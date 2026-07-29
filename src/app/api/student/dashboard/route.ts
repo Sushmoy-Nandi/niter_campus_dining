@@ -20,7 +20,10 @@ export async function GET(req: NextRequest) {
     }
 
     const now = new Date()
-    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
+    // Use Bangladesh time for "today" to match all other APIs
+    const bdtString = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" })
+    const bdtNow = new Date(bdtString)
+    const today = new Date(Date.UTC(bdtNow.getFullYear(), bdtNow.getMonth(), bdtNow.getDate()))
     
     const tomorrow = new Date(today)
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
@@ -61,11 +64,8 @@ export async function GET(req: NextRequest) {
       periodDeposit = deposits._sum.amount || 0;
     }
 
-    const todayDate = new Date()
-    todayDate.setUTCHours(0, 0, 0, 0)
-    
     const balance = student.wallet?.balance || 0
-    const { autoOff, reason: autoOffReason } = isStudentAutoOff(balance, activePeriod, todayDate, periodDeposit);
+    const { autoOff, reason: autoOffReason } = isStudentAutoOff(balance, activePeriod, today, periodDeposit);
 
     const monthlySchedules = await prisma.mealSchedule.findMany({
       where: {

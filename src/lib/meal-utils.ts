@@ -166,6 +166,8 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
     include: { wallet: true },
   })
 
+  const periodDepositMap = await getStudentPeriodDeposits(period);
+
   const msInDay = 24 * 60 * 60 * 1000
   const periodStart = new Date(period.startDate)
   const periodEnd = new Date(period.endDate)
@@ -178,7 +180,9 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
 
   await prisma.$transaction(async (tx) => {
     for (const student of students) {
-      let monthlyMealCount = daysInMonth * 2 // Default: 2 meals per day
+      const balance = student.wallet?.balance || 0;
+      const periodDeposit = periodDepositMap.get(student.id) || 0;
+      let monthlyMealCount = 0;
       
       const monthlySchedules = await tx.mealSchedule.findMany({
         where: {
@@ -187,9 +191,28 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
         },
       })
 
+      // Build schedule map for this student
+      const studentScheduleMap = new Map();
       for (const schedule of monthlySchedules) {
-        if (!schedule.lunch) monthlyMealCount -= 1
-        if (!schedule.dinner) monthlyMealCount -= 1
+        const dStr = new Date(schedule.date).toISOString().split('T')[0];
+        studentScheduleMap.set(dStr, schedule);
+      }
+
+      // Iterate day by day, checking auto-off for each day
+      const iterDate = new Date(periodStart);
+      while (iterDate <= periodEnd) {
+        const { autoOff } = isStudentAutoOff(balance, period, iterDate, periodDeposit);
+        if (!autoOff) {
+          const dStr = iterDate.toISOString().split('T')[0];
+          const s = studentScheduleMap.get(dStr);
+          if (s) {
+            if (s.lunch) monthlyMealCount += 1;
+            if (s.dinner) monthlyMealCount += 1;
+          } else {
+            monthlyMealCount += 2; // Default: both meals ON
+          }
+        }
+        iterDate.setDate(iterDate.getDate() + 1);
       }
 
       let remainingBalance = student.wallet?.balance || 0;

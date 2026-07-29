@@ -65,7 +65,9 @@ export async function GET(req: NextRequest) {
     }
 
     const balance = student.wallet?.balance || 0
-    const today = new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()))
+    const bdtStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" })
+    const bdtNow = new Date(bdtStr)
+    const today = new Date(Date.UTC(bdtNow.getFullYear(), bdtNow.getMonth(), bdtNow.getDate()))
     const { autoOff, reason } = isStudentAutoOff(balance, activePeriod, today, periodDeposit)
 
     return NextResponse.json({ 
@@ -107,14 +109,23 @@ export async function POST(req: NextRequest) {
     const mealDate = new Date(date)
     mealDate.setUTCHours(0, 0, 0, 0)
 
-    const now = new Date()
+    // Deadline: 10:00 PM BDT the day before the target date
+    // We compute "now" in BDT and compare against a BDT-aware deadline
+    const nowBdtStr = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" })
+    const nowBdt = new Date(nowBdtStr)
+    
+    // Deadline is the day before mealDate at 10:00 PM BDT
+    const deadlineBdt = new Date(mealDate)
+    deadlineBdt.setDate(deadlineBdt.getDate() - 1)
+    // Set to 10 PM BDT: we compare using BDT hours
+    const deadlineHour = 22 // 10 PM
+    const bdtHour = nowBdt.getHours()
+    const bdtDateStr = `${nowBdt.getFullYear()}-${String(nowBdt.getMonth() + 1).padStart(2, '0')}-${String(nowBdt.getDate()).padStart(2, '0')}`
+    const deadlineDateStr = `${deadlineBdt.getFullYear()}-${String(deadlineBdt.getMonth() + 1).padStart(2, '0')}-${String(deadlineBdt.getDate()).padStart(2, '0')}`
+    
+    const pastDeadline = bdtDateStr > deadlineDateStr || (bdtDateStr === deadlineDateStr && bdtHour >= deadlineHour)
 
-    // Deadline: 10:00 PM BST the day before the target date
-    const deadline = new Date(mealDate)
-    deadline.setDate(deadline.getDate() - 1)
-    deadline.setHours(22, 0, 0, 0)
-
-    if (now >= deadline) {
+    if (pastDeadline) {
       return NextResponse.json(
         { error: "Changes must be made before 10:00 PM BST the day before" },
         { status: 400 }

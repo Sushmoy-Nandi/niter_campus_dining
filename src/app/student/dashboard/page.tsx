@@ -42,8 +42,9 @@ export default function StudentDashboard() {
   const [submittingFeedback, setSubmittingFeedback] = useState(false)
 
   useEffect(() => {
-    async function fetchData() {
+    async function fetchData(showLoader = true) {
       try {
+        if (showLoader) setLoading(true)
         const dashRes = await fetch("/api/student/dashboard", {
           cache: 'no-store',
           headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
@@ -81,10 +82,12 @@ export default function StudentDashboard() {
       } catch (e) {
         console.error(e)
       } finally {
-        setLoading(false)
+        if (showLoader) setLoading(false)
       }
     }
     fetchData()
+    const interval = setInterval(() => fetchData(false), 30000)
+    return () => clearInterval(interval)
   }, [])
 
   async function handleVote(pollId: string, pollOptionId: string) {

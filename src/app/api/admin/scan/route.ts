@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     }
 
     const balance = student.wallet?.balance || 0;
-    const { autoOff, reason: offReason } = isStudentAutoOff(balance, activePeriod, new Date(), periodDeposit);
+    const { autoOff, reason: offReason } = isStudentAutoOff(balance, activePeriod, bdtDate, periodDeposit);
 
     if (autoOff) {
       await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_AUTO_OFF`, details: offReason }})
