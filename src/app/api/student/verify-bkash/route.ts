@@ -25,9 +25,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "TrxID is required" }, { status: 400 });
     }
 
+    const normalizedTrxId = trxId.toUpperCase();
+
     // Check BkashLedger
     const bkashRecord = await prisma.bkashLedger.findUnique({
-      where: { trxId }
+      where: { trxId: normalizedTrxId }
     });
 
     if (!bkashRecord) {

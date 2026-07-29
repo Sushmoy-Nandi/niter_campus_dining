@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const senderMatch = messageBody.match(/from\s+(01\d{9})/i);
 
     if (trxIdMatch && amountMatch) {
-      const trxId = trxIdMatch[1];
+      const trxId = trxIdMatch[1].toUpperCase();
       const amountStr = amountMatch[1].replace(/,/g, '');
       const amount = parseFloat(amountStr);
       const senderNumber = senderMatch ? senderMatch[1] : null;
@@ -55,9 +55,13 @@ export async function POST(req: NextRequest) {
         });
         console.log(`Saved new bKash TrxID: ${trxId} for Tk ${amount}`);
       }
+      return NextResponse.json({ success: true });
+    } else {
+      return NextResponse.json({ 
+        error: "Failed to extract TrxID or Amount from message", 
+        receivedBody: messageBody 
+      }, { status: 400 });
     }
-
-    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Webhook error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
