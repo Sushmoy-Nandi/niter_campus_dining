@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
         hour12: true
       });
       
-      const detailsMsg = `Double scan attempt (previously checked in at ${scanTime})`;
+      const detailsMsg = `Double scan attempt (previously checked in for ${currentMeal} at ${scanTime})`;
       await prisma.auditLog.create({ 
         data: { 
           studentId: student.id, 

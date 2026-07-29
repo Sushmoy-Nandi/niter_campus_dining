@@ -103,6 +103,20 @@ export default function ScanLogsPage() {
                 <TableBody>
                   {logs.map((log: any) => {
                     const isSuccess = log.action.startsWith("MEAL_SCANNED_")
+                    const isDouble = log.details?.includes("Double scan attempt")
+                    const isAutoOff = log.details?.includes("auto-disabled") || log.action === "FAILED_SCAN_AUTO_OFF"
+                    
+                    let badgeVariant = isSuccess ? "default" : "destructive" as any;
+                    let badgeText = isSuccess ? "SUCCESS" : "FAILED";
+                    
+                    if (isDouble) {
+                      badgeVariant = "outline"
+                      badgeText = "DOUBLE SCAN"
+                    } else if (isAutoOff) {
+                      badgeVariant = "secondary"
+                      badgeText = "AUTO-OFF"
+                    }
+
                     return (
                       <TableRow key={log.id}>
                         <TableCell className="whitespace-nowrap">
@@ -111,8 +125,8 @@ export default function ScanLogsPage() {
                         <TableCell className="font-medium">{log.student.name}</TableCell>
                         <TableCell>{log.student.diningId || log.student.studentId}</TableCell>
                         <TableCell>
-                          <Badge variant={isSuccess ? "default" : "destructive"}>
-                            {isSuccess ? "SUCCESS" : "FAILED"}
+                          <Badge variant={badgeVariant} className={isDouble ? "text-orange-600 border-orange-600" : ""}>
+                            {badgeText}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
