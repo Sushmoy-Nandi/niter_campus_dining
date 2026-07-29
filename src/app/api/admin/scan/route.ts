@@ -22,6 +22,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Must provide student ID or Dining ID" }, { status: 400 })
     }
 
+    // 1. FIRST CHECK TIME (Before any database queries)
+    // Get current time in Bangladesh Time (BDT)
+    const bdtString = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
+    const bdtDate = new Date(bdtString);
+    const hour = bdtDate.getHours();
+    const minute = bdtDate.getMinutes();
+    
+    const year = bdtDate.getFullYear();
+    const month = String(bdtDate.getMonth() + 1).padStart(2, '0');
+    const day = String(bdtDate.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+    
+    // Determine meal type based on time strict boundaries
+    // Lunch: 10:00 AM to 5:00 PM (10:00 to 16:59)
+    // Dinner: 7:00 PM to 11:30 PM (19:00 to 23:30) same day
+    let currentMeal: "lunch" | "dinner" | null = null;
+    
+    if (hour >= 10 && hour < 17) {
+      currentMeal = "lunch";
+    } else if (hour >= 19 && (hour < 23 || (hour === 23 && minute <= 30))) {
+      currentMeal = "dinner";
+    }
+
+    if (!currentMeal) {
+      return NextResponse.json({ error: "No active meal service at this time. Lunch is 10AM-5PM, Dinner is 7PM-11:30PM." }, { status: 400 })
+    }
+
     let student = null;
     if (studentId) {
       student = await prisma.student.findUnique({
@@ -65,32 +92,6 @@ export async function POST(req: NextRequest) {
     if (autoOff) {
       await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_AUTO_OFF`, details: offReason }})
       return NextResponse.json({ error: `Meal auto-disabled: ${offReason}` }, { status: 403 })
-    }
-
-    // Get current time in Bangladesh Time (BDT)
-    const bdtString = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
-    const bdtDate = new Date(bdtString);
-    const hour = bdtDate.getHours();
-    const minute = bdtDate.getMinutes();
-    
-    const year = bdtDate.getFullYear();
-    const month = String(bdtDate.getMonth() + 1).padStart(2, '0');
-    const day = String(bdtDate.getDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${day}`;
-    
-    // Determine meal type based on time strict boundaries
-    // Lunch: 10:00 AM to 5:00 PM (10:00 to 16:59)
-    // Dinner: 7:00 PM to 11:30 PM (19:00 to 23:30) same day
-    let currentMeal: "lunch" | "dinner" | null = null;
-    
-    if (hour >= 10 && hour < 17) {
-      currentMeal = "lunch";
-    } else if (hour >= 19 && (hour < 23 || (hour === 23 && minute <= 30))) {
-      currentMeal = "dinner";
-    }
-
-    if (!currentMeal) {
-      return NextResponse.json({ error: "No active meal service at this time. Lunch is 10AM-5PM, Dinner is 7PM-11:30PM." }, { status: 400 })
     }
 
     // Find the schedule for today
