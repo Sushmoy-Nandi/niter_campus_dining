@@ -72,6 +72,11 @@ export async function POST(req: NextRequest) {
     const bdtDate = new Date(bdtString);
     const hour = bdtDate.getHours();
     
+    // CRITICAL FIX: If it's after midnight but before 4 AM, it is still technically yesterday's dinner!
+    if (hour < 4) {
+      bdtDate.setDate(bdtDate.getDate() - 1);
+    }
+    
     const year = bdtDate.getFullYear();
     const month = String(bdtDate.getMonth() + 1).padStart(2, '0');
     const day = String(bdtDate.getDate()).padStart(2, '0');
