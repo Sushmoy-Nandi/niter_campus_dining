@@ -100,8 +100,6 @@ export async function GET(req: Request) {
     const periodDepositMap = await getStudentPeriodDeposits(activePeriod);
 
     let totalDinner = 0;
-    let totalGuestLunch = 0;
-    let totalGuestDinner = 0;
 
     const result = students.map(student => {
       const studentSchedules = scheduleMap.get(student.id) || []
@@ -109,14 +107,6 @@ export async function GET(req: Request) {
       
       let lunch = 0;
       let dinner = 0;
-      let guestLunch = 0;
-      let guestDinner = 0;
-      
-      // Calculate guest meals
-      studentSchedules.forEach((s: any) => {
-        guestLunch += s.guestLunch || 0;
-        guestDinner += s.guestDinner || 0;
-      });
 
       const balance = student.wallet?.balance || 0;
       let autoOff = false; // Just to reflect current status for the UI
@@ -151,8 +141,6 @@ export async function GET(req: Request) {
 
       totalLunch += lunch;
       totalDinner += dinner;
-      totalGuestLunch += guestLunch;
-      totalGuestDinner += guestDinner;
 
       return {
         id: student.id,
@@ -161,8 +149,6 @@ export async function GET(req: Request) {
         diningId: student.diningId || "",
         lunch,
         dinner,
-        guestLunch,
-        guestDinner,
         autoOff,
       }
     })
@@ -184,9 +170,7 @@ export async function GET(req: Request) {
       students: result,
       summary: {
         totalLunch,
-        totalDinner,
-        totalGuestLunch,
-        totalGuestDinner
+        totalDinner
       },
       scanStats,
       feedbackStats

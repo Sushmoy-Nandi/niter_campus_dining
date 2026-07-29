@@ -37,17 +37,13 @@ export async function GET(req: Request) {
 
       let lunchCount = 0
       let dinnerCount = 0
-      let guestLunchCount = 0
-      let guestDinnerCount = 0
 
       for (const s of schedules) {
         if (s.lunch) lunchCount++
         if (s.dinner) dinnerCount++
-        guestLunchCount += s.guestLunch || 0
-        guestDinnerCount += s.guestDinner || 0
       }
 
-      const totalMeals = lunchCount + dinnerCount + guestLunchCount + guestDinnerCount
+      const totalMeals = lunchCount + dinnerCount
 
       // Get meal rate for period
       const rateData = await calculateDynamicMealRate(period.startDate, period.endDate)
@@ -72,8 +68,6 @@ export async function GET(req: Request) {
         endDate: period.endDate,
         lunchCount,
         dinnerCount,
-        guestLunchCount,
-        guestDinnerCount,
         totalMeals,
         mealRate,
         totalCost,

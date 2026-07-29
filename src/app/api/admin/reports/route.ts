@@ -96,11 +96,7 @@ export async function GET(req: NextRequest) {
           }
         }
         
-        // Guest meals are always counted (if recorded)
-        if (s) {
-           meals += (s.guestLunch || 0)
-           meals += (s.guestDinner || 0)
-        }
+        // Removed guest meals calculation
         
         d.setDate(d.getDate() + 1)
       }

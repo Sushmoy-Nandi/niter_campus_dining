@@ -150,8 +150,7 @@ model MealSchedule {
   date        DateTime
   lunch       Boolean  @default(false)
   dinner      Boolean  @default(false)
-  guestLunch  Int      @default(0)
-  guestDinner Int      @default(0)
+  // Removed guest meal fields
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
