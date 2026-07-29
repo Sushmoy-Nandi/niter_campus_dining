@@ -131,6 +131,9 @@ model Transaction {
   createdAt   DateTime        @default(now())
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, type, createdAt])
+  @@index([createdAt])
 }
 
 model MealRate {
@@ -153,6 +156,7 @@ model MealSchedule {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, date])
+  @@index([date])
 }
 
 model DailyCharge {
@@ -166,6 +170,7 @@ model DailyCharge {
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, date])
+  @@index([date])
 }
 
 model Admin {
@@ -201,6 +206,9 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([studentId, action])
 }
 
 model Bazaar {
