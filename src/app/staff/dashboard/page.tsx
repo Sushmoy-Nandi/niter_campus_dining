@@ -56,23 +56,27 @@ export default function StaffDashboard() {
   useEffect(() => {
     if (startDate && endDate) {
       fetchDailyMeals(startDate, endDate)
+      const interval = setInterval(() => {
+        fetchDailyMeals(startDate, endDate, false)
+      }, 10000) // Poll every 10 seconds
+      return () => clearInterval(interval)
     }
   }, [startDate, endDate])
 
-  async function fetchDailyMeals(start: string, end: string) {
+  async function fetchDailyMeals(start: string, end: string, showLoader = true) {
     try {
-      setLoading(true)
+      if (showLoader) setLoading(true)
       const res = await fetch(`/api/admin/reports/daily-meals?startDate=${start}&endDate=${end}`)
       if (res.ok) {
         const data = await res.json()
         setMealData(data)
       } else {
-        toast.error("Failed to fetch daily meals")
+        if (showLoader) toast.error("Failed to fetch daily meals")
       }
     } catch (error) {
-      toast.error("An error occurred")
+      if (showLoader) toast.error("An error occurred")
     } finally {
-      setLoading(false)
+      if (showLoader) setLoading(false)
     }
   }
 

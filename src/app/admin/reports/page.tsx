@@ -69,20 +69,20 @@ export default function AdminReports() {
   useEffect(() => { fetchPeriods() }, [fetchPeriods])
   useEffect(() => { if (periodId) fetchReport(periodId) }, [periodId, fetchReport])
 
-  const fetchDailyMeals = useCallback(async (date: string) => {
-    setLoadingDaily(true)
+  const fetchDailyMeals = useCallback(async (date: string, showLoader = true) => {
+    if (showLoader) setLoadingDaily(true)
     try {
       const res = await fetch(`/api/admin/reports/daily-meals?date=${date}`)
       if (res.ok) {
         const data = await res.json()
         setDailyMeals(data.students || [])
       } else {
-        toast.error("Failed to load daily meals")
+        if (showLoader) toast.error("Failed to load daily meals")
       }
     } catch (error) {
-      toast.error("Error loading daily meals")
+      if (showLoader) toast.error("Error loading daily meals")
     }
-    setLoadingDaily(false)
+    if (showLoader) setLoadingDaily(false)
   }, [])
 
   const fetchFeedback = useCallback(async (date: string) => {
@@ -103,6 +103,10 @@ export default function AdminReports() {
 
   useEffect(() => {
     fetchDailyMeals(dailyMealDate)
+    const interval = setInterval(() => {
+      fetchDailyMeals(dailyMealDate, false)
+    }, 10000)
+    return () => clearInterval(interval)
   }, [dailyMealDate, fetchDailyMeals])
 
   useEffect(() => {
