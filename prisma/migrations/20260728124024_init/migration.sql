@@ -94,7 +94,6 @@ CREATE TABLE "Transaction" (
 -- CreateTable
 CREATE TABLE "MealRate" (
     "id" TEXT NOT NULL,
-    "breakfastPrice" DOUBLE PRECISION NOT NULL,
     "lunchPrice" DOUBLE PRECISION NOT NULL,
     "dinnerPrice" DOUBLE PRECISION NOT NULL,
     "effectiveFrom" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -108,7 +107,6 @@ CREATE TABLE "MealSchedule" (
     "id" TEXT NOT NULL,
     "studentId" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
-    "breakfast" BOOLEAN NOT NULL DEFAULT false,
     "lunch" BOOLEAN NOT NULL DEFAULT false,
     "dinner" BOOLEAN NOT NULL DEFAULT false,
 
@@ -120,7 +118,6 @@ CREATE TABLE "DailyCharge" (
     "id" TEXT NOT NULL,
     "studentId" TEXT NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
-    "breakfastCharge" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "lunchCharge" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "dinnerCharge" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalCharge" DOUBLE PRECISION NOT NULL DEFAULT 0,

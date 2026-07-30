@@ -37,6 +37,7 @@ async function main() {
     },
   })
 
+  /*
   const students = [
     { studentId: "221-15-5001", name: "Md. Rahman", department: "Textile Engineering", session: "2019-20" },
     { studentId: "221-15-5002", name: "Fatima Akter", department: "Computer Science", session: "2019-20" },
@@ -86,6 +87,7 @@ async function main() {
       },
     })
   }
+  */
 
   console.log("Seeding completed!")
 }
