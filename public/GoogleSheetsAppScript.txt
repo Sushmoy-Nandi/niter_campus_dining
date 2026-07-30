@@ -269,3 +269,9 @@ function buildSheetWithData(data) {
     bRow++;
   }
 }
+
+function doPost(e) {
+  // This runs the sync whenever the website pings it
+  syncLiveMasterSheet();
+  return ContentService.createTextOutput("Sync triggered successfully!");
+}
