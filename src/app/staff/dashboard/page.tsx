@@ -247,26 +247,28 @@ export default function StaffDashboard() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex flex-col md:flex-row items-start md:items-end gap-4 flex-1">
-              <div className="space-y-2 flex-1 max-w-[150px]">
-                <Label>Start Date</Label>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 flex-1">
+              <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
+                <div className="space-y-1 flex-1 sm:max-w-[150px]">
+                  <Label className="text-xs">Start Date</Label>
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full h-9" />
+                </div>
+                <div className="space-y-1 flex-1 sm:max-w-[150px]">
+                  <Label className="text-xs">End Date</Label>
+                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full h-9" />
+                </div>
               </div>
-              <div className="space-y-2 flex-1 max-w-[150px]">
-                <Label>End Date</Label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-              </div>
-              <Button onClick={() => fetchDailyMeals(startDate, endDate)} variant="outline">
+              <Button onClick={() => fetchDailyMeals(startDate, endDate)} variant="outline" className="w-full sm:w-auto h-9">
                 <Search className="h-4 w-4 mr-2" /> Refresh
               </Button>
             </div>
             {mealData && (
-              <div className="flex items-end mt-4 md:mt-0">
+              <div className="flex items-end mt-2 md:mt-0 w-full md:w-auto">
                 <DropdownMenu>
-                  <DropdownMenuTrigger render={<Button variant="secondary" />}>
+                  <DropdownMenuTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 h-9 px-4 py-2 w-full md:w-auto">
                       <Download className="h-4 w-4 mr-2" /> Export Report
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="w-full md:w-auto">
                     <DropdownMenuItem onClick={exportPDF}>
                       <FileIcon className="h-4 w-4 mr-2 text-red-500" /> Export as PDF
                     </DropdownMenuItem>

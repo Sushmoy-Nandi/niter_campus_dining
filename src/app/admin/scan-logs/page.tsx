@@ -137,23 +137,23 @@ export default function ScanLogsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Scan Monitor</h1>
           <p className="text-muted-foreground">Real-time logs for {data?.startDate === data?.endDate ? data?.startDate : `${data?.startDate} to ${data?.endDate}`}.</p>
         </div>
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="space-y-1">
+        <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 w-full md:w-auto mt-4 md:mt-0">
+          <div className="flex flex-row items-center gap-2 w-full sm:w-auto">
+            <div className="space-y-1 flex-1 sm:flex-none">
               <Label className="text-xs">Start Date</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9" />
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="h-9 w-full sm:w-auto" />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1 flex-1 sm:flex-none">
               <Label className="text-xs">End Date</Label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9" />
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="h-9 w-full sm:w-auto" />
             </div>
           </div>
           {data?.logs && data.logs.length > 0 && (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 h-9 px-4 py-2 mt-5">
+              <DropdownMenuTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 h-9 px-4 py-2 w-full sm:w-auto">
                 <Download className="h-4 w-4 mr-2" /> Export
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-full sm:w-auto">
                 <DropdownMenuItem onClick={exportPDF}>
                   <FileIcon className="h-4 w-4 mr-2 text-red-500" /> Export as PDF
                 </DropdownMenuItem>
