@@ -40,14 +40,8 @@ export default function LoginPage() {
     setError("")
 
     if (step === "PASSWORD") {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error === "Admin login requires an OTP.") {
-        // Trigger the OTP generation API
+      // First, attempt to trigger the OTP if it's an admin
+      try {
         const otpReq = await fetch("/api/admin/auth/send-otp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -56,13 +50,26 @@ export default function LoginPage() {
         const otpRes = await otpReq.json();
         
         if (otpRes.success) {
+          // It's an admin with correct password! Switch to OTP screen.
           setStep("OTP")
-        } else {
-          setError(otpRes.error || "Failed to send verification code")
+          setLoading(false)
+          return
         }
-        setLoading(false)
-      } else if (result?.error) {
-        setError(result.error) // Standard login error
+      } catch (err) {
+        console.error("OTP API Error:", err)
+      }
+
+      // If we are here, it's either a student logging in normally,
+      // or an admin who entered the wrong password. Let NextAuth handle it.
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        // NextAuth v5 beta hides custom messages by default
+        setError("Invalid email or password")
         setLoading(false)
       } else {
         // Success (Student or Staff)
@@ -77,7 +84,7 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        setError(result.error)
+        setError("Invalid OTP or expired")
         setLoading(false)
       } else {
         // Success (Admin)
