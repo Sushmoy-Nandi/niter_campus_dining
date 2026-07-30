@@ -84,34 +84,35 @@ export async function GET(req: Request) {
     const colorDep3 = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB6D7A8' } } as any; // Pastel Green
 
     // Col widths
-    sheet.getColumn('A').width = 4.75;
-    sheet.getColumn('B').width = 19.25;
-    sheet.getColumn('C').width = 12; // ID
-    sheet.getColumn('D').width = 25.0; // Info
-    sheet.getColumn('E').width = 10.75;
-    sheet.getColumn('F').width = 10.5;
-    sheet.getColumn('G').width = 11.13;
-    sheet.getColumn('H').width = 12.0;
-    sheet.getColumn('J').width = 10.75;
-    sheet.getColumn('L').width = 11.25;
-    sheet.getColumn('N').width = 16.88;
-    sheet.getColumn('P').width = 4.88;
-    sheet.getColumn('Q').width = 21.75;
-    sheet.getColumn('R').width = 12; // ID
+        sheet.getColumn('A').width = 12; // ID
+    sheet.getColumn('B').width = 19.25; // Name
+    sheet.getColumn('C').width = 10.75;
+    sheet.getColumn('D').width = 10.5;
+    sheet.getColumn('E').width = 11.13;
+    sheet.getColumn('F').width = 12.0;
+    sheet.getColumn('G').width = 4.75; // Sep
+    sheet.getColumn('H').width = 10.75;
+    sheet.getColumn('I').width = 11.25;
+    sheet.getColumn('J').width = 11.25;
+    sheet.getColumn('K').width = 4.75; // Sep
+    sheet.getColumn('L').width = 16.88; // Stats
+    sheet.getColumn('M').width = 4.75; // Sep
+    sheet.getColumn('N').width = 12; // ID
+    sheet.getColumn('O').width = 19.25; // Name
 
-    let cIndex = 17; // Q
+    let cIndex = 16; // Q
     for (let i = 0; i < 31; i++) {
       sheet.getColumn(cIndex).width = 4.5;
       sheet.getColumn(cIndex+1).width = 4.5;
       cIndex += 2;
     }
     
-    sheet.getColumn('CA').width = 8.88;
-    sheet.getColumn('CB').width = 4.75;
-    sheet.getColumn('CE').width = 17.88;
-    sheet.getColumn('CF').width = 24.13;
-    sheet.getColumn('CG').width = 44;
-    sheet.getColumn('CH').width = 15.25;
+        sheet.getColumn('BZ').width = 8.88;
+    sheet.getColumn('CA').width = 4.75;
+    sheet.getColumn('CB').width = 17.88;
+    sheet.getColumn('CC').width = 24.13;
+    sheet.getColumn('CD').width = 44;
+    sheet.getColumn('CE').width = 15.25;
 
     // Headers
     const r1 = sheet.getRow(1);
@@ -139,31 +140,28 @@ export async function GET(req: Request) {
       }
     };
 
-    setHeader('A', 'SL', '', colorA_G);
+        setHeader('A', 'ID', '', colorA_G);
     setHeader('B', 'Name', '', colorA_G);
-    setHeader('C', 'ID', '', colorA_G);
-    setHeader('D', 'Info', '', colorA_G);
     
     const lastRow = students.length + 2; // e.g. 302 if 300 students
     const totalRowIdx = lastRow + 1; // e.g. 303
     
-    setHeader('E', { formula: `="Deposite 1 "&CHAR(10)&SUM(E${totalRowIdx}+0)` }, '', colorDep1);
-    setHeader('F', { formula: `="Deposite 2 "&CHAR(10)&SUM(F${totalRowIdx}+0)` }, '', colorDep2);
-    setHeader('G', { formula: `="Deposite 3 "&CHAR(10)&SUM(G${totalRowIdx}+0)` }, '', colorDep3);
-    setHeader('H', { formula: `="Total Deposite "&CHAR(10)&SUM(H${totalRowIdx}+0)` }, '', colorA_G);
+    setHeader('C', { formula: `="Deposite 1 "&CHAR(10)&SUM(C${totalRowIdx}+0)` }, '', colorDep1);
+    setHeader('D', { formula: `="Deposite 2 "&CHAR(10)&SUM(D${totalRowIdx}+0)` }, '', colorDep2);
+    setHeader('E', { formula: `="Deposite 3 "&CHAR(10)&SUM(E${totalRowIdx}+0)` }, '', colorDep3);
+    setHeader('F', { formula: `="Total Deposite "&CHAR(10)&SUM(F${totalRowIdx}+0)` }, '', colorA_G);
 
-    setHeader('J', 'Deposite', '', colorI_K);
-    setHeader('K', 'Cost', '', colorI_K);
-    setHeader('L', 'On-Hand', '', colorI_K);
+    setHeader('H', 'Deposite', '', colorI_K);
+    setHeader('I', 'Cost', '', colorI_K);
+    setHeader('J', 'On-Hand', '', colorI_K);
 
-    const m1 = r1.getCell('N');
+        const m1 = r1.getCell('L');
     m1.border = borderStyle;
-    const m2 = r2.getCell('N');
+    const m2 = r2.getCell('L');
     m2.border = borderStyle;
 
-    setHeader('P', 'SL', '', colorO_CF);
-    setHeader('Q', 'Name', '', colorO_CF);
-    setHeader('R', 'ID', '', colorO_CF);
+        setHeader('N', 'ID', '', colorO_CF);
+    setHeader('O', 'Name', '', colorO_CF);
 
     let currentDate = new Date(periodStart);
     let dateCol = 19; // S // Q
@@ -199,39 +197,39 @@ export async function GET(req: Request) {
       dateCol += 2;
     }
 
-    setHeader('CC', 'Total Meals', '', colorO_CF);
-    setHeader('CE', 'Date', '', colorO_CF);
-    setHeader('CF', 'Name', '', colorO_CF);
-    setHeader('CG', 'Bazer Details', '', colorO_CF);
-    setHeader('CH', 'Cost', '', colorO_CF);
+    setHeader('BZ', 'Total Meals', '', colorO_CF);
+    setHeader('CB', 'Date', '', colorO_CF);
+    setHeader('CC', 'Name', '', colorO_CF);
+    setHeader('CD', 'Bazer Details', '', colorO_CF);
+    setHeader('CE', 'Cost', '', colorO_CF);
 
     // M formulas
-    sheet.getCell('N3').value = 'Current Meal Rate';
-    sheet.getCell('N3').font = fontBold;
-    sheet.getCell('N4').value = { formula: 'IFERROR(N11/N7, 0)' };
-    sheet.getCell('N4').font = { ...fontBold, size: 12, color: { argb: 'FFFF0000' } }; // Make it pop just in case
-    sheet.getCell('N4').alignment = alignCenter;
+    sheet.getCell('L3').value = 'Current Meal Rate';
+    sheet.getCell('L3').font = fontBold;
+    sheet.getCell('L4').value = { formula: 'IFERROR(L11/L7, 0)' };
+    sheet.getCell('L4').font = { ...fontBold, size: 12, color: { argb: 'FFFF0000' } }; // Make it pop just in case
+    sheet.getCell('L4').alignment = alignCenter;
     
     // N block formatting
-    ['N3', 'N4', 'N6', 'N7', 'N10', 'N11', 'N13', 'N14'].forEach(cellRef => {
+    ['L3', 'L4', 'L6', 'L7', 'L10', 'L11', 'L13', 'L14'].forEach(cellRef => {
         sheet.getCell(cellRef).border = borderStyle;
         sheet.getCell(cellRef).alignment = alignCenter;
     });
 
-    sheet.getCell('N6').value = 'Total Meal Count';
-    sheet.getCell('N6').font = fontBold;
-    sheet.getCell(`N7`).value = { formula: `SUM(CC3:CC${lastRow})` };
-    sheet.getCell(`N7`).numFmt = '0';
+    sheet.getCell('L6').value = 'Total Meal Count';
+    sheet.getCell('L6').font = fontBold;
+    sheet.getCell(`L7`).value = { formula: `SUM(BZ3:BZ${lastRow})` };
+    sheet.getCell(`L7`).numFmt = '0';
     
-    sheet.getCell('N10').value = 'Total Cost';
-    sheet.getCell('N10').font = fontBold;
-    sheet.getCell(`N11`).value = { formula: `SUM(CH3:CH${lastRow})` };
-    sheet.getCell(`N11`).numFmt = '0.00';
+    sheet.getCell('L10').value = 'Total Cost';
+    sheet.getCell('L10').font = fontBold;
+    sheet.getCell(`L11`).value = { formula: `SUM(CE3:CE${lastRow})` };
+    sheet.getCell(`L11`).numFmt = '0.00';
     
-    sheet.getCell('N13').value = 'On-Hand';
-    sheet.getCell('N13').font = fontBold;
-    sheet.getCell(`N14`).value = { formula: `SUM(L3:L${lastRow})` };
-    sheet.getCell(`N14`).numFmt = '0.00';
+    sheet.getCell('L13').value = 'On-Hand';
+    sheet.getCell('L13').font = fontBold;
+    sheet.getCell(`L14`).value = { formula: `SUM(J3:J${lastRow})` };
+    sheet.getCell(`L14`).numFmt = '0.00';
 
     // Students Data
     let r = 3;
@@ -250,24 +248,21 @@ export async function GET(req: Request) {
       const balance = student.wallet?.balance || 0;
       const periodDeposit = periodDepositMap.get(student.id) || 0;
       
-      applyCell('A', sl);
+            applyCell('A', student.diningId);
       applyCell('B', student.name);
-      applyCell('C', student.diningId);
-      applyCell('D', student.department || '');
-      applyCell('E', periodDeposit); // We just put the total deposit in Deposite 1 for simplicity in live view, or maybe we can't split it perfectly. Let's just put it in D.
-      applyCell('F', 0);
-      applyCell('G', 0);
-      applyCell('H', { formula: `SUM(E${r}:G${r})` });
+      applyCell('C', periodDeposit); // Deposite 1
+      applyCell('D', 0); // Deposite 2
+      applyCell('E', 0); // Deposite 3
+      applyCell('F', { formula: `SUM(C${r}:E${r})` });
       
-      applyCell('J', { formula: `SUM(H${r}+0)` });
-      applyCell('K', { formula: `CC${r}*$N$4` }); // Calculates live cost
-      applyCell('L', { formula: `J${r}-K${r}` }); // Calculates live balance
+            applyCell('H', { formula: `SUM(F${r}+0)` });
+      applyCell('I', { formula: `BZ${r}*$L$4` }); // Calculates live cost
+      applyCell('J', { formula: `H${r}-I${r}` }); // Calculates live balance // Calculates live balance
       
-      applyCell('P', sl);
-      applyCell('Q', student.name);
-      applyCell('R', student.diningId);
+            applyCell('N', student.diningId);
+      applyCell('O', student.name);
 
-      let mc = 19;
+      let mc = 16;
       let totalMealsForStudent = 0;
       for (let i = 0; i < 31; i++) {
         let lVal: number | string = '';
@@ -297,8 +292,8 @@ export async function GET(req: Request) {
         mc += 2;
       }
 
-      const cellCA = sheet.getCell(`CC${r}`);
-      cellCA.value = { formula: `SUM(S${r}:CB${r})` };
+            const cellCA = sheet.getCell(`BZ${r}`);
+      cellCA.value = { formula: `SUM(P${r}:BY${r})` };
       cellCA.font = fontNormal;
       cellCA.fill = colorTotalMeals;
       cellCA.alignment = alignCenter;
@@ -306,10 +301,10 @@ export async function GET(req: Request) {
       cellCA.numFmt = '0';
 
       // Ensure CF area is clear initially
+            applyCell('CB', ''); 
+      applyCell('CC', ''); 
+      applyCell('CD', ''); 
       applyCell('CE', ''); 
-      applyCell('CF', ''); 
-      applyCell('CG', ''); 
-      applyCell('CH', '');
 
       r++;
       sl++;
@@ -344,11 +339,11 @@ export async function GET(req: Request) {
     let bRow = 3;
     for (const b of bazaars) {
       if (bRow > lastRow) break; // If we exceed student rows, just stop for safety
-      sheet.getCell(`CE${bRow}`).value = new Date(b.date);
-      sheet.getCell(`CE${bRow}`).numFmt = 'dd-mm-yyyy';
-      sheet.getCell(`CF${bRow}`).value = b.name || 'Bazaar';
-      sheet.getCell(`CG${bRow}`).value = b.details || '';
-      sheet.getCell(`CH${bRow}`).value = b.amount;
+      sheet.getCell(`CB${bRow}`).value = new Date(b.date);
+      sheet.getCell(`CB${bRow}`).numFmt = 'dd-mm-yyyy';
+      sheet.getCell(`CC${bRow}`).value = b.name || 'Bazaar';
+      sheet.getCell(`CD${bRow}`).value = b.details || '';
+      sheet.getCell(`CE${bRow}`).value = b.amount;
       bRow++;
     }
 
