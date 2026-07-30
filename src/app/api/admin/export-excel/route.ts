@@ -148,10 +148,10 @@ export async function GET(req: Request) {
     const lastRow = students.length + 2; // e.g. 302 if 300 students
     const totalRowIdx = lastRow + 1; // e.g. 303
     
-    setHeader('D', { formula: `="Deposite 1 "&CHAR(10)&SUM(D${totalRowIdx}+0)` }, '', colorA_G);
-    setHeader('E', { formula: `="Deposite 2 "&CHAR(10)&SUM(E${totalRowIdx}+0)` }, '', colorA_G);
-    setHeader('F', { formula: `="Deposite 3 "&CHAR(10)&SUM(F${totalRowIdx}+0)` }, '', colorA_G);
-    setHeader('G', { formula: `="Total Deposite "&CHAR(10)&SUM(G${totalRowIdx}+0)` }, '', colorA_G);
+    setHeader('E', { formula: `="Deposite 1 "&CHAR(10)&SUM(E${totalRowIdx}+0)` }, '', colorA_G);
+    setHeader('F', { formula: `="Deposite 2 "&CHAR(10)&SUM(F${totalRowIdx}+0)` }, '', colorA_G);
+    setHeader('G', { formula: `="Deposite 3 "&CHAR(10)&SUM(G${totalRowIdx}+0)` }, '', colorA_G);
+    setHeader('H', { formula: `="Total Deposite "&CHAR(10)&SUM(H${totalRowIdx}+0)` }, '', colorA_G);
 
     setHeader('J', 'Deposite', '', colorI_K);
     setHeader('K', 'Cost', '', colorI_K);
