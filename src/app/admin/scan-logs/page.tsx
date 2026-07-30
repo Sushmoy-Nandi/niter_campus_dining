@@ -46,7 +46,7 @@ export default function ScanLogsPage() {
       if (isDouble) status = "DOUBLE SCAN"
       if (isAutoOff) status = "AUTO-OFF"
       return [
-        new Date(log.createdAt).toLocaleString(),
+        new Date(log.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         log.student.name,
         log.student.diningId || log.student.studentId,
         status,
@@ -73,7 +73,7 @@ export default function ScanLogsPage() {
       if (isDouble) status = "DOUBLE SCAN"
       if (isAutoOff) status = "AUTO-OFF"
       return {
-        "Time": new Date(log.createdAt).toLocaleString(),
+        "Time": new Date(log.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         "Student": log.student.name,
         "Dining ID": log.student.diningId || log.student.studentId,
         "Status": status,
@@ -103,7 +103,7 @@ export default function ScanLogsPage() {
         if (isDouble) status = "DOUBLE SCAN"
         if (isAutoOff) status = "AUTO-OFF"
         return [
-          new Date(log.createdAt).toLocaleString(),
+          new Date(log.createdAt).toLocaleString('en-US', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           log.student.name,
           log.student.diningId || log.student.studentId,
           status,
@@ -249,7 +249,7 @@ export default function ScanLogsPage() {
                     return (
                       <TableRow key={log.id}>
                         <TableCell className="whitespace-nowrap">
-                          {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          {new Date(log.createdAt).toLocaleTimeString('en-US', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </TableCell>
                         <TableCell className="font-medium">{log.student.name}</TableCell>
                         <TableCell>{log.student.diningId || log.student.studentId}</TableCell>
