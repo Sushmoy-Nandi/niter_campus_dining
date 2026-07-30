@@ -110,7 +110,7 @@ export async function POST(req: Request) {
     })
 
     // 3. Trigger Google Sheets live sync in background
-    triggerLiveSheetSync();
+    await triggerLiveSheetSync();
 
     return NextResponse.json(bazaar, { status: 201 })
   } catch (error) {
@@ -138,7 +138,7 @@ export async function DELETE(req: Request) {
     })
 
     // 4. Trigger Google Sheets live sync when a record is deleted
-    triggerLiveSheetSync();
+    await triggerLiveSheetSync();
 
     return NextResponse.json({ success: true })
   } catch (error) {

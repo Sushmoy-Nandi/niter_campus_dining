@@ -100,7 +100,7 @@ export async function PUT(req: NextRequest) {
 
     if (action === "APPROVE") {
       // Trigger Google Sheets auto-sync to deduct the deposit there as well
-      triggerLiveSheetSync();
+      await triggerLiveSheetSync();
     }
 
     return NextResponse.json({ message: `Request ${action.toLowerCase()}d successfully`, result })
