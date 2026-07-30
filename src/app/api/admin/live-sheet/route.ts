@@ -63,6 +63,8 @@ export async function GET(req: Request) {
   csvRows.push(headerRow.join(","))
 
   let sl = 1
+  let grandTotalMeals = 0;
+  let dailyTotals = new Array(daysList.length * 2).fill(0);
   for (const student of students) {
     const balance = student.wallet?.balance || 0;
     const periodDeposit = periodDepositMap.get(student.id) || 0;
@@ -71,7 +73,8 @@ export async function GET(req: Request) {
     let dailyRow = [];
 
     // Calculate daily meals
-    for (const d of daysList) {
+    for (let i = 0; i < daysList.length; i++) {
+      const d = daysList[i];
       const { autoOff } = isStudentAutoOff(balance, activePeriod, d, periodDeposit);
       if (autoOff) {
         dailyRow.push("0")
@@ -90,6 +93,8 @@ export async function GET(req: Request) {
         dailyRow.push(din.toString())
         
         totalMeals += l + din
+        dailyTotals[i*2] += l
+        dailyTotals[i*2+1] += din
       }
     }
 
@@ -106,8 +111,38 @@ export async function GET(req: Request) {
       totalMeals
     ]
     
+    grandTotalMeals += totalMeals;
     csvRows.push([...row, ...dailyRow].join(","))
   }
+
+  // Add Total Meals Row
+  const totalRow = ["", "", "", "", "", "", "TOTAL MEALS", grandTotalMeals]
+  csvRows.push([...totalRow, ...dailyTotals.map(n => n.toString())].join(","))
+
+  // Fetch Bazaar and Add Daily Bazaar Cost Row
+  const bazaars = await prisma.bazaar.findMany({
+    where: { date: { gte: periodStart, lte: periodEnd } }
+  })
+  
+  const bazaarMap = new Map<string, number>();
+  bazaars.forEach(b => {
+    const dStr = new Date(b.date).toISOString().split('T')[0];
+    bazaarMap.set(dStr, (bazaarMap.get(dStr) || 0) + b.amount);
+  })
+
+  let totalBazaarCostSum = 0;
+  let dailyBazaarRow = [];
+  
+  for (let i = 0; i < daysList.length; i++) {
+    const dStr = daysList[i].toISOString().split('T')[0];
+    const cost = bazaarMap.get(dStr) || 0;
+    totalBazaarCostSum += cost;
+    dailyBazaarRow.push(cost.toString()) // Put cost under Lunch column
+    dailyBazaarRow.push("")              // Leave Dinner column blank
+  }
+
+  const bazaarRow = ["", "", "", "", "", "", "DAILY BAZAAR COST", totalBazaarCostSum.toFixed(2)]
+  csvRows.push([...bazaarRow, ...dailyBazaarRow].join(","))
 
   const csvContent = csvRows.join("\n")
 
