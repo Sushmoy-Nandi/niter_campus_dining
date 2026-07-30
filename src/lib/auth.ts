@@ -3,6 +3,16 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import { prisma } from "./prisma"
 
+import { CredentialsSignin } from "next-auth"
+
+class CustomAuthError extends CredentialsSignin {
+  code: string;
+  constructor(message: string) {
+    super();
+    this.code = message;
+  }
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers: [
@@ -15,7 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email) {
-          throw new Error("Email is required")
+          throw new CustomAuthError("Email is required")
         }
 
         const user = await prisma.user.findUnique({
@@ -23,21 +33,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
 
         if (!user) {
-          throw new Error("Invalid email or password")
+          throw new CustomAuthError("Invalid email or password")
         }
 
         // --- ADMIN LOGIN LOGIC (2-Step Verification) ---
         if (user.role === "ADMIN") {
           if (!credentials.otp) {
-            throw new Error("Admin login requires an OTP.")
+            throw new CustomAuthError("Admin login requires an OTP.")
           }
           
           if (user.otpCode !== credentials.otp) {
-            throw new Error("Invalid OTP.")
+            throw new CustomAuthError("Invalid OTP.")
           }
           
           if (!user.otpExpiresAt || new Date() > user.otpExpiresAt) {
-            throw new Error("OTP has expired. Please request a new one.")
+            throw new CustomAuthError("OTP has expired. Please request a new one.")
           }
 
           // Clear the OTP upon successful login
@@ -49,7 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // --- STUDENT/STAFF LOGIN LOGIC (Password) ---
         else {
           if (!credentials.password || !user.passwordHash) {
-            throw new Error("Invalid email or password")
+            throw new CustomAuthError("Invalid email or password")
           }
 
           const isValid = await compare(
@@ -58,7 +68,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           )
 
           if (!isValid) {
-            throw new Error("Invalid email or password")
+            throw new CustomAuthError("Invalid email or password")
           }
         }
 
