@@ -285,21 +285,23 @@ export default function AdminReports() {
         <CardHeader className="pb-2">
           <CardTitle className="text-lg flex items-center gap-2">
             <Star className="h-5 w-5 text-yellow-500" />
-            Live Google Sheets Sync
+            Live Pixel-Perfect Google Sheets Sync
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            You can keep a live, automatically updating version of the Master Sheet in Google Sheets. You never have to manually export again!
+            You can keep a live, automatically updating version of the Master Sheet in Google Sheets that maintains exact colors, formulas, and formatting!
           </p>
-          <ol className="list-decimal pl-5 text-sm space-y-1">
+          <ol className="list-decimal pl-5 text-sm space-y-1 mb-4">
             <li>Open a blank Google Spreadsheet</li>
-            <li>Click on cell <strong>A1</strong></li>
-            <li>Copy and paste this exact formula:</li>
+            <li>Click on <strong>Extensions &gt; Apps Script</strong></li>
+            <li>Delete the default code and paste our custom synchronization script (click button below).</li>
+            <li>Update the <code className="bg-muted px-1 rounded">API_URL</code> inside the script to point to your live website URL.</li>
+            <li>Save and run the <code className="bg-muted px-1 rounded">onOpen</code> function. A new <strong>Campus Dining Sync</strong> menu will appear in your Google Sheet!</li>
           </ol>
-          <div className="mt-3 p-3 bg-black text-green-400 font-mono text-xs rounded-md overflow-x-auto whitespace-nowrap">
-            =IMPORTDATA(&quot;{typeof window !== 'undefined' ? window.location.origin : ''}/api/admin/live-sheet?secret={process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026"}&quot;)
-          </div>
+          <Button variant="secondary" onClick={() => window.open('/GoogleSheetsAppScript.txt', '_blank')}>
+            View / Download Apps Script Code
+          </Button>
         </CardContent>
       </Card>
 
