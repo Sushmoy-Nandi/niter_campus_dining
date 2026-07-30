@@ -1,8 +1,26 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { triggerLiveSheetSync } from "@/lib/google-sync"
+import { z } from "zod"
 
 export const dynamic = 'force-dynamic'
+
+// 1. Create a strict validation schema for Bazaar data
+const itemSchema = z.object({
+  name: z.string().min(1, "Item name is required"),
+  quantity: z.preprocess((val) => Number(val), z.number().min(0)),
+  unit: z.string().min(1, "Unit is required"),
+  price: z.preprocess((val) => Number(val), z.number().min(0)),
+})
+
+const bazaarSchema = z.object({
+  date: z.string().or(z.date()), // Accepts string dates or Date objects
+  name: z.string().min(1, "Bazaar name is required"),
+  details: z.string().optional().default(""),
+  amount: z.preprocess((val) => Number(val), z.number().min(0, "Amount must be valid")),
+  items: z.array(itemSchema).optional().default([]),
+})
 
 export async function GET(req: Request) {
   try {
@@ -51,6 +69,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json(bazaars)
   } catch (error) {
+    console.error("Bazaar GET error:", error) // Added error logging
     return NextResponse.json({ error: "Failed to fetch bazaar records" }, { status: 500 })
   }
 }
@@ -63,28 +82,39 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { date, name, details, amount, items } = body
+    
+    // 2. Validate the incoming data before touching the database
+    const validated = bazaarSchema.safeParse(body)
+    if (!validated.success) {
+      return NextResponse.json({ error: validated.error.issues[0].message }, { status: 400 })
+    }
+
+    const { date, name, details, amount, items } = validated.data
 
     const bazaar = await prisma.bazaar.create({
       data: {
         date: new Date(date),
         name,
         details,
-        amount: parseFloat(amount),
+        amount,
         items: {
-          create: Array.isArray(items) ? items.map((i: any) => ({
+          create: items.map((i) => ({
             name: i.name,
-            quantity: parseFloat(i.quantity),
+            quantity: i.quantity,
             unit: i.unit,
-            price: parseFloat(i.price)
-          })) : []
+            price: i.price
+          }))
         }
       },
       include: { items: true }
     })
 
-    return NextResponse.json(bazaar)
+    // 3. Trigger Google Sheets live sync in background
+    triggerLiveSheetSync();
+
+    return NextResponse.json(bazaar, { status: 201 })
   } catch (error) {
+    console.error("Bazaar POST error:", error) // Added error logging
     return NextResponse.json({ error: "Failed to add bazaar record" }, { status: 500 })
   }
 }
@@ -107,8 +137,12 @@ export async function DELETE(req: Request) {
       where: { id },
     })
 
+    // 4. Trigger Google Sheets live sync when a record is deleted
+    triggerLiveSheetSync();
+
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error("Bazaar DELETE error:", error) // Added error logging
     return NextResponse.json({ error: "Failed to delete bazaar record" }, { status: 500 })
   }
 }

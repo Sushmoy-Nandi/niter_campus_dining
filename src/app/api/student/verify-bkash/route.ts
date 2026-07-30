@@ -49,14 +49,21 @@ export async function POST(req: NextRequest) {
 
     // Process the deposit!
     await prisma.$transaction(async (tx) => {
-      // 1. Mark TrxID as CLAIMED
-      await tx.bkashLedger.update({
-        where: { id: bkashRecord.id },
-        data: { 
+      // 1. Mark TrxID as CLAIMED — conditional on it still being UNCLAIMED.
+      //    Two concurrent claims of the same TrxID would both pass the pre-check
+      //    above; this guarded write lets only the first transaction match a row
+      //    (count === 1). The loser matches zero rows, throws, and rolls back, so
+      //    the wallet is credited exactly once even under a race / double-submit.
+      const claimed = await tx.bkashLedger.updateMany({
+        where: { id: bkashRecord.id, status: "UNCLAIMED" },
+        data: {
           status: "CLAIMED",
           claimedById: student.id
         }
       });
+      if (claimed.count === 0) {
+        throw new Error("ALREADY_CLAIMED");
+      }
 
       // 2. Add to student wallet
       await tx.wallet.upsert({
@@ -103,7 +110,13 @@ export async function POST(req: NextRequest) {
       message: `Successfully verified and added Tk ${bkashRecord.amount} to your wallet!` 
     });
 
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === "ALREADY_CLAIMED") {
+      return NextResponse.json(
+        { error: "This TrxID has already been claimed." },
+        { status: 400 }
+      );
+    }
     console.error("Verify bKash error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
