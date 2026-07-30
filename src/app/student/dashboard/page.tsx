@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Wallet, UtensilsCrossed, CalendarDays, TrendingDown, Clock, MessageSquare, Star } from "lucide-react"
+import { Wallet, UtensilsCrossed, CalendarDays, TrendingDown, Clock, MessageSquare, Star, Download } from "lucide-react"
 import { LOW_BALANCE_THRESHOLD } from "@/lib/constants"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import { QRCodeSVG } from 'qrcode.react'
+import { QRCodeSVG, QRCodeCanvas } from 'qrcode.react'
+import { jsPDF } from "jspdf"
 
 interface DashboardData {
   student: any
@@ -135,6 +136,31 @@ export default function StudentDashboard() {
     }
   }
 
+  const downloadQRAsPDF = () => {
+    const canvas = document.getElementById("qr-canvas") as HTMLCanvasElement
+    if (!canvas) return
+    const imgData = canvas.toDataURL("image/png")
+    const doc = new jsPDF()
+    
+    doc.setFontSize(22)
+    doc.text("NITER Campus Dining", 105, 20, { align: "center" })
+    
+    doc.setFontSize(16)
+    doc.text("Meal Pass", 105, 30, { align: "center" })
+
+    // 100x100 QR code centered at x=55 (105-50)
+    doc.addImage(imgData, "PNG", 55, 45, 100, 100)
+
+    doc.setFontSize(20)
+    doc.text(`Dining ID: ${data?.student?.diningId || "N/A"}`, 105, 160, { align: "center" })
+
+    doc.setFontSize(14)
+    doc.text(`Name: ${data?.student?.name}`, 105, 175, { align: "center" })
+    doc.text(`Department: ${data?.student?.department || "N/A"}`, 105, 185, { align: "center" })
+    
+    doc.save(`Meal_Pass_${data?.student?.diningId || 'QR'}.pdf`)
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -176,13 +202,17 @@ export default function StudentDashboard() {
         </CardHeader>
         <CardContent className="flex flex-col items-center">
           <div className="bg-white p-4 rounded-xl shadow-sm border">
-            <QRCodeSVG 
+            <QRCodeCanvas 
+              id="qr-canvas"
               value={JSON.stringify({ type: "MEAL_CHECKIN", studentId: data.student?.id })}
               size={150}
               level="H"
             />
           </div>
           <p className="text-xs text-muted-foreground mt-3 text-center">Scan this at the dining hall to check-in for your meal.</p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={downloadQRAsPDF}>
+            <Download className="h-4 w-4 mr-2" /> Download QR as PDF
+          </Button>
         </CardContent>
       </Card>
 
