@@ -28,21 +28,25 @@ export async function GET(req: Request) {
       orderBy: { diningId: 'asc' }
     })
 
-    const rawDeposits = await prisma.transaction.findMany({
+    // FIX 1: Fetch both DEPOSITS and REFUNDS
+    const rawTransactions = await prisma.transaction.findMany({
       where: {
-        type: "DEPOSIT",
+        type: { in: ["DEPOSIT", "REFUND"] },
         createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
       },
       orderBy: { createdAt: "asc" }
     });
 
-    const studentDepositsMap = new Map<string, number[]>();
-    for (const d of rawDeposits) {
-      if (!studentDepositsMap.has(d.studentId)) {
-        studentDepositsMap.set(d.studentId, []);
+    // FIX 2: Map transactions, converting refunds to negative numbers
+    const studentTransactionsMap = new Map<string, number[]>();
+    for (const t of rawTransactions) {
+      if (!studentTransactionsMap.has(t.studentId)) {
+        studentTransactionsMap.set(t.studentId, []);
       }
-      studentDepositsMap.get(d.studentId)!.push(d.amount);
+      const amount = t.type === "REFUND" ? -Math.abs(t.amount) : t.amount;
+      studentTransactionsMap.get(t.studentId)!.push(amount);
     }
+    
     const periodStart = new Date(activePeriod.startDate)
     const periodEnd = new Date(activePeriod.endDate)
     periodEnd.setHours(23, 59, 59, 999) // Force end of day
@@ -86,8 +90,11 @@ export async function GET(req: Request) {
       })),
       students: students.map(student => {
         const balance = student.wallet?.balance || 0;
-        const depositTxs = studentDepositsMap.get(student.id) || [];
-        const sumTxs = depositTxs.reduce((a, b) => a + b, 0);
+        
+        // Get the array of transactions (positives and negatives)
+        const txsArray = studentTransactionsMap.get(student.id) || [];
+        const sumTxs = txsArray.reduce((a, b) => a + b, 0);
+        
         const meals: { l: number, d: number }[] = [];
         let totalMealsCount = 0;
         
@@ -106,10 +113,16 @@ export async function GET(req: Request) {
           }
         });
 
-        // Wallet balance represents the TOTAL money they have (carry-over + new deposits)
-        // because meal costs are only permanently deducted at the end of the month.
+        // Wallet balance represents the TOTAL money they have
         const carryOver = balance - sumTxs;
-        const depositsArray = carryOver > 0 ? [carryOver, ...depositTxs] : [...depositTxs];
+        let depositsArray = carryOver > 0 ? [carryOver, ...txsArray] : [...txsArray];
+
+        // FIX 3: Ensure the array doesn't exceed 3 slots for the Google Sheet. 
+        // If there are too many transactions + refunds, sum the remaining ones into Deposit 3.
+        if (depositsArray.length > 3) {
+          const combinedThird = depositsArray.slice(2).reduce((sum, val) => sum + val, 0);
+          depositsArray = [depositsArray[0], depositsArray[1], combinedThird];
+        }
 
         return {
           name: student.name,
