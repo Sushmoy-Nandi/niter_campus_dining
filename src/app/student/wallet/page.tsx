@@ -176,11 +176,11 @@ export default function StudentWalletPage() {
         <div className="flex items-center gap-2">
           <Dialog open={isBkashDialogOpen} onOpenChange={setIsBkashDialogOpen}>
             <DialogTrigger render={<Button variant="default" className="bg-pink-600 hover:bg-pink-700 text-white" />}>
-              Add By bKash Payment
+              Add By bKash Send Money
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Submit bKash Payment</DialogTitle>
+                <DialogTitle>Submit bKash TrxID</DialogTitle>
                 <DialogDescription>
                   Enter the TrxID from your bKash SMS. The system will automatically verify and add the balance to your wallet instantly.
                 </DialogDescription>
