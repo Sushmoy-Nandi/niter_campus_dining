@@ -241,6 +241,9 @@ export default function AdminReports() {
              <p className="text-sm text-muted-foreground">No periods available</p>
           )}
           <div className="flex gap-2">
+            <Button onClick={() => window.open('/api/admin/live-sheet?secret=NITER_MASTER_2026', '_blank')} variant="default" className="bg-green-600 hover:bg-green-700 text-white font-bold">
+              <Download className="mr-2 h-4 w-4" /> Live Master CSV
+            </Button>
             <Button onClick={exportCSV} variant="outline" disabled={periods.length === 0 || report.length === 0}>
               <Download className="mr-2 h-4 w-4" /> CSV
             </Button>
@@ -268,6 +271,28 @@ export default function AdminReports() {
           <CardContent><p className="text-2xl font-bold">{summary.mealRate.toFixed(2)} BDT</p></CardContent>
         </Card>
       </div>
+
+      <Card className="bg-primary/5 border-primary/20">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-500" />
+            Live Google Sheets Sync
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            You can keep a live, automatically updating version of the Master Sheet in Google Sheets. You never have to manually export again!
+          </p>
+          <ol className="list-decimal pl-5 text-sm space-y-1">
+            <li>Open a blank Google Spreadsheet</li>
+            <li>Click on cell <strong>A1</strong></li>
+            <li>Copy and paste this exact formula:</li>
+          </ol>
+          <div className="mt-3 p-3 bg-black text-green-400 font-mono text-xs rounded-md overflow-x-auto whitespace-nowrap">
+            =IMPORTDATA(&quot;{typeof window !== 'undefined' ? window.location.origin : ''}/api/admin/live-sheet?secret=NITER_MASTER_2026&quot;)
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

@@ -147,6 +147,7 @@ export default function StudentWalletPage() {
         ['Final Dynamic Meal Rate', `${invoice.mealRate.toFixed(2)} BDT`],
         ['Total Cost of Meals', `${invoice.totalCost.toFixed(2)} BDT`],
         ['Total Deposits Made', `${invoice.totalDeposit.toFixed(2)} BDT`],
+        ['Remaining Balance', `${(invoice.totalDeposit - invoice.totalCost).toFixed(2)} BDT`],
       ],
       theme: 'grid',
       headStyles: { fillColor: [41, 128, 185], textColor: 255 },
@@ -339,6 +340,9 @@ export default function StudentWalletPage() {
                       
                       <span className="text-muted-foreground">Deposits:</span>
                       <span className="font-medium text-green-600 text-right">+{inv.totalDeposit.toFixed(2)} BDT</span>
+                      
+                      <span className="text-muted-foreground font-bold border-t pt-1 mt-1">Remaining Balance:</span>
+                      <span className="font-bold text-primary text-right border-t pt-1 mt-1">{(inv.totalDeposit - inv.totalCost).toFixed(2)} BDT</span>
                     </div>
                   </div>
                   <Button variant="default" className="mt-4 md:mt-0" onClick={() => exportInvoicePDF(inv)}>
