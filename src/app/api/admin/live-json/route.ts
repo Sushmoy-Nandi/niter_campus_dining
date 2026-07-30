@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getStudentPeriodDeposits, isStudentAutoOff } from "@/lib/meal-utils"
+import { getStudentPeriodDeposits, isStudentAutoOff, calculateDynamicMealRate } from "@/lib/meal-utils"
 
 export const dynamic = 'force-dynamic'
 
@@ -54,6 +54,8 @@ export async function GET(req: Request) {
       where: { date: { gte: periodStart, lte: periodEnd } }
     })
 
+    const calculateDynamicMealRateResult = await calculateDynamicMealRate(activePeriod.startDate, activePeriod.endDate);
+
     // Construct the payload for the Apps Script
     const payload = {
       period: {
@@ -70,30 +72,37 @@ export async function GET(req: Request) {
       })),
       students: students.map(student => {
         const balance = student.wallet?.balance || 0;
-        const deposit = periodDepositMap.get(student.id) || 0;
+        const depositTx = periodDepositMap.get(student.id) || 0;
         
         const meals: { l: number, d: number }[] = [];
+        let totalMealsCount = 0;
         
         daysList.forEach(dayIso => {
           const d = new Date(dayIso);
-          const { autoOff } = isStudentAutoOff(balance, activePeriod, d, deposit);
+          const { autoOff } = isStudentAutoOff(balance, activePeriod, d, depositTx);
           if (autoOff) {
             meals.push({ l: 0, d: 0 });
           } else {
             const dStr = dayIso.split('T')[0];
             const s = scheduleMap.get(dStr)?.get(student.id);
-            meals.push({
-              l: s ? (s.lunch ? 1 : 0) : 1,
-              d: s ? (s.dinner ? 1 : 0) : 1
-            });
+            const l = s ? (s.lunch ? 1 : 0) : 1;
+            const din = s ? (s.dinner ? 1 : 0) : 1;
+            meals.push({ l, d: din });
+            totalMealsCount += (l + din);
           }
         });
+
+        // The exact cost this student has incurred so far in this period
+        // We calculate this server-side to reverse-engineer their "Effective Deposit"
+        // This guarantees that On-Hand (Deposit - Cost) matches the true wallet balance.
+        const { mealRate } = calculateDynamicMealRateResult;
+        const effectiveDeposit = balance + (totalMealsCount * mealRate);
 
         return {
           name: student.name,
           diningId: student.diningId,
           department: student.department || '',
-          deposit: deposit,
+          deposit: effectiveDeposit,
           meals: meals
         }
       })

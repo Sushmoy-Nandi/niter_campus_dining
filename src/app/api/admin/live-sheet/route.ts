@@ -99,13 +99,14 @@ export async function GET(req: Request) {
     }
 
     const cost = totalMeals * mealRate;
+    const effectiveDeposit = balance + cost;
 
     const row = [
       sl++,
       `"${student.name}"`,
       `"${student.department || ""}"`,
       `"${student.diningId || ""}"`,
-      periodDeposit.toFixed(2),
+      effectiveDeposit.toFixed(2),
       cost.toFixed(2),
       balance.toFixed(2),
       totalMeals

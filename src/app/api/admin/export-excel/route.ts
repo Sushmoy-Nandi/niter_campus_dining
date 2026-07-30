@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getStudentPeriodDeposits, isStudentAutoOff } from "@/lib/meal-utils"
+import { getStudentPeriodDeposits, isStudentAutoOff, calculateDynamicMealRate } from "@/lib/meal-utils"
 import ExcelJS from "exceljs"
 import { auth } from "@/lib/auth"
 
@@ -61,6 +61,8 @@ export async function GET(req: Request) {
     const bazaars = await prisma.bazaar.findMany({
       where: { date: { gte: periodStart, lte: periodEnd } }
     })
+
+    const { mealRate } = await calculateDynamicMealRate(activePeriod.startDate, activePeriod.endDate);
 
     // Create Workbook
     const workbook = new ExcelJS.Workbook();
@@ -252,31 +254,19 @@ export async function GET(req: Request) {
       };
 
       const balance = student.wallet?.balance || 0;
-      const periodDeposit = periodDepositMap.get(student.id) || 0;
+      const periodDepositTx = periodDepositMap.get(student.id) || 0;
       
-            applyCell('A', student.diningId);
-      applyCell('B', student.name);
-      applyCell('C', periodDeposit); // Deposite 1
-      applyCell('D', 0); // Deposite 2
-      applyCell('E', 0); // Deposite 3
-      applyCell('F', { formula: `SUM(C${r}:E${r})` });
-      
-            applyCell('H', { formula: `SUM(F${r}+0)` });
-      applyCell('I', { formula: `BZ${r}*$L$4` }); // Calculates live cost
-      applyCell('J', { formula: `H${r}-I${r}` }); // Calculates live balance // Calculates live balance
-      
-            applyCell('N', student.diningId);
-      applyCell('O', student.name);
-
       let mc = 16;
       let totalMealsForStudent = 0;
+      let dailyVals: any[] = [];
+      
       for (let i = 0; i < 31; i++) {
         let lVal: number | string = '';
         let dVal: number | string = '';
         
         if (i < daysList.length) {
           const d = daysList[i];
-          const { autoOff } = isStudentAutoOff(balance, activePeriod, d, periodDeposit);
+          const { autoOff } = isStudentAutoOff(balance, activePeriod, d, periodDepositTx);
           if (autoOff) {
             lVal = 0; dVal = 0;
           } else {
@@ -284,9 +274,31 @@ export async function GET(req: Request) {
             const s = scheduleMap.get(dStr)?.get(student.id);
             lVal = s ? (s.lunch ? 1 : 0) : 1;
             dVal = s ? (s.dinner ? 1 : 0) : 1;
+            totalMealsForStudent += lVal + dVal;
           }
         }
-        
+        dailyVals.push({ lVal, dVal });
+      }
+
+      const cost = totalMealsForStudent * mealRate;
+      const effectiveDeposit = balance + cost;
+
+      applyCell('A', student.diningId);
+      applyCell('B', student.name);
+      applyCell('C', effectiveDeposit); // Deposite 1
+      applyCell('D', 0); // Deposite 2
+      applyCell('E', 0); // Deposite 3
+      applyCell('F', { formula: `SUM(C${r}:E${r})` });
+      
+      applyCell('H', { formula: `SUM(F${r}+0)` });
+      applyCell('I', { formula: `BZ${r}*$L$4` }); // Calculates live cost
+      applyCell('J', { formula: `H${r}-I${r}` }); // Calculates live balance
+      
+      applyCell('N', student.diningId);
+      applyCell('O', student.name);
+
+      for (let i = 0; i < 31; i++) {
+        const { lVal, dVal } = dailyVals[i];
         const cellL = row.getCell(mc);
         cellL.value = lVal;
         cellL.font = fontNormal; cellL.alignment = alignCenter; cellL.border = borderStyle;
@@ -297,6 +309,7 @@ export async function GET(req: Request) {
         
         mc += 2;
       }
+
 
             const cellCA = sheet.getCell(`BZ${r}`);
       cellCA.value = { formula: `SUM(P${r}:BY${r})` };
