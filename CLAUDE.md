@@ -33,6 +33,8 @@ Campus Dining NITER — a meal management system for a Bangladeshi university. T
 - **Auto-Suspension (CRITICAL):** A student's meal is ON if `MealSchedule` is ON **AND** `isStudentAutoOff()` returns `false`. If `autoOff` is true, meals are suspended system-wide regardless of the schedule.
 - Meal toggles allowed only for future dates; same-day changes allowed until 10:00 AM BDT.
 - Wallet balance uses `Float`; financial operations must use Prisma transactions.
+- **Wallet Balances vs Meal Costs (CRITICAL):** Meal costs are **NOT** deducted from `wallet.balance` dynamically during the month. They are only permanently deducted at the end of the month via `settleDiningPeriod`. Therefore, during an active period, `wallet.balance` represents the **Total Deposit** (plus any carry-over). Do not mistakenly add the current meal cost to the `wallet.balance` to calculate deposits.
+- **Google Sheets Sync:** The project uses a Google Apps Script (`public/GoogleSheetsAppScript.txt`) synced via `api/admin/live-json`. The Apps Script must dynamically handle up to 35-day periods (91 columns) and parse an array of individual deposits, keeping "Deposit 1" open for the first real deposit rather than consuming it with a 0-value carry-over.
 
 ## Database
 
