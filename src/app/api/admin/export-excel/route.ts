@@ -153,7 +153,16 @@ export async function GET(req: Request) {
     setHeader('I', 'Deposite', '', colorI_K);
     setHeader('J', 'Cost', '', colorI_K);
     setHeader('K', 'On-Hand', '', colorI_K);
-    setHeader('M', 'Current Meal Rate', '', { type: 'pattern', pattern: 'none' } as any);
+
+    // M header (NOT merged, M1 is blank, M2 has text)
+    const m1 = r1.getCell('M');
+    m1.border = borderStyle;
+    const m2 = r2.getCell('M');
+    m2.value = 'Current Meal Rate';
+    m2.font = fontBold;
+    m2.alignment = alignCenter;
+    m2.border = borderStyle;
+
     setHeader('O', 'SL', '', colorO_CF);
     setHeader('P', 'Name', '', colorO_CF);
 

@@ -136,7 +136,11 @@ function buildSheetWithData(data) {
   setHeader(10, 'Cost', '', colorI_K);
   setHeader(11, 'On-Hand', '', colorI_K);
   
-  setHeader(13, 'Current Meal Rate', '', null);
+  // M header (NOT merged, M1 is blank, M2 has text)
+  sheet.getRange(1, 13).setBorder(true, true, true, true, false, false);
+  sheet.getRange(2, 13).setValue('Current Meal Rate').setFontWeight("bold")
+    .setHorizontalAlignment("center").setVerticalAlignment("middle")
+    .setWrap(true).setBorder(true, true, true, true, false, false);
   
   setHeader(15, 'SL', '', colorO_CF);
   setHeader(16, 'Name', '', colorO_CF);
