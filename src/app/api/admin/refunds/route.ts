@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendEmail } from "@/lib/email"
+import { triggerLiveSheetSync } from "@/lib/google-sync"
 
 export async function GET(req: NextRequest) {
   try {
@@ -52,10 +53,17 @@ export async function PUT(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const updated = await tx.refundRequest.update({
-        where: { id },
+      // Guard the status transition inside the transaction: only flip a row that is
+      // still PENDING. On a double-approve (e.g. an impatient double-click) the second
+      // call matches zero rows, throws, and rolls back before any wallet decrement,
+      // so a refund can never be paid out twice.
+      const guard = await tx.refundRequest.updateMany({
+        where: { id, status: "PENDING" },
         data: { status: action === "APPROVE" ? "APPROVED" : "REJECTED" },
       })
+      if (guard.count === 0) {
+        throw new Error("ALREADY_PROCESSED")
+      }
 
       if (action === "APPROVE") {
         await tx.wallet.update({
@@ -72,7 +80,7 @@ export async function PUT(req: NextRequest) {
           },
         })
       }
-      return updated
+      return { id, status: action === "APPROVE" ? "APPROVED" : "REJECTED" }
     })
 
     const statusText = action === "APPROVE" ? "Approved" : "Rejected";
@@ -90,8 +98,16 @@ export async function PUT(req: NextRequest) {
       </div>`
     );
 
+    if (action === "APPROVE") {
+      // Trigger Google Sheets auto-sync to deduct the deposit there as well
+      triggerLiveSheetSync();
+    }
+
     return NextResponse.json({ message: `Request ${action.toLowerCase()}d successfully`, result })
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.message === "ALREADY_PROCESSED") {
+      return NextResponse.json({ error: "Request already processed" }, { status: 400 })
+    }
     console.error("Process refund request error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
