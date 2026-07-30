@@ -90,7 +90,7 @@ export async function GET(req: Request) {
         });
 
         return {
-          name: student.name,
+          name: `${student.name} (${student.diningId})`,
           department: student.department || '',
           deposit: deposit,
           meals: meals

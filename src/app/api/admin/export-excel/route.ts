@@ -233,9 +233,10 @@ export async function GET(req: Request) {
 
       const balance = student.wallet?.balance || 0;
       const periodDeposit = periodDepositMap.get(student.id) || 0;
+      const formattedName = `${student.name} (${student.diningId})`;
 
       applyCell('A', sl);
-      applyCell('B', student.name);
+      applyCell('B', formattedName);
       applyCell('C', student.department || '');
       applyCell('D', periodDeposit); // We just put the total deposit in Deposite 1 for simplicity in live view, or maybe we can't split it perfectly. Let's just put it in D.
       applyCell('E', 0);
@@ -247,7 +248,7 @@ export async function GET(req: Request) {
       applyCell('K', { formula: `I${r}-J${r}` }); // Calculates live balance
       
       applyCell('O', sl);
-      applyCell('P', student.name);
+      applyCell('P', formattedName);
 
       let mc = 17;
       let totalMealsForStudent = 0;
