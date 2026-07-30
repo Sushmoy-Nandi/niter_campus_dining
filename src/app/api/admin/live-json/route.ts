@@ -109,7 +109,7 @@ export async function GET(req: Request) {
         // Wallet balance represents the TOTAL money they have (carry-over + new deposits)
         // because meal costs are only permanently deducted at the end of the month.
         const carryOver = balance - sumTxs;
-        const depositsArray = [carryOver > 0 ? carryOver : 0, ...depositTxs];
+        const depositsArray = carryOver > 0 ? [carryOver, ...depositTxs] : [...depositTxs];
 
         return {
           name: student.name,
