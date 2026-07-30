@@ -243,7 +243,7 @@ export async function GET(req: Request) {
       applyCell('C', student.diningId);
       applyCell('D', student.department || '');
       applyCell('E', periodDeposit); // We just put the total deposit in Deposite 1 for simplicity in live view, or maybe we can't split it perfectly. Let's just put it in D.
-      applyCell('G', 0);
+      applyCell('F', 0);
       applyCell('G', 0);
       applyCell('H', { formula: `SUM(E${r}:G${r})` });
       
@@ -285,18 +285,18 @@ export async function GET(req: Request) {
         mc += 2;
       }
 
-      const cellCA = sheet.getCell(`CA${r}`);
-      cellCA.value = { formula: `SUM(Q${r}:BZ${r})` };
+      const cellCA = sheet.getCell(`CC${r}`);
+      cellCA.value = { formula: `SUM(S${r}:CB${r})` };
       cellCA.font = fontNormal;
       cellCA.fill = colorTotalMeals;
       cellCA.alignment = alignCenter;
       cellCA.border = borderStyle;
 
       // Ensure CF area is clear initially
-      applyCell('CC', ''); 
-      applyCell('CD', ''); 
       applyCell('CE', ''); 
-      applyCell('CF', '');
+      applyCell('CF', ''); 
+      applyCell('CG', ''); 
+      applyCell('CH', '');
 
       r++;
       sl++;
@@ -311,31 +311,31 @@ export async function GET(req: Request) {
       cell.border = borderStyle;
     };
     
-    applyTotal('D', `SUM(D3:D${lastRow})`);
     applyTotal('E', `SUM(E3:E${lastRow})`);
     applyTotal('F', `SUM(F3:F${lastRow})`);
     applyTotal('G', `SUM(G3:G${lastRow})`);
+    applyTotal('H', `SUM(H3:H${lastRow})`);
 
-    let tc = 17; // Q
+    let tc = 19; // S
     for (let i = 0; i < 62; i++) {
       const colLetter = sheet.getColumn(tc).letter;
       applyTotal(colLetter, `SUM(${colLetter}3:${colLetter}${lastRow})`);
       tc++;
     }
 
-    applyTotal('CA', `SUM(Q${totalRowIdx}:BZ${totalRowIdx})`);
-    sheet.getCell(`CA${totalRowIdx}`).fill = colorTotalMeals;
-    applyTotal('CF', `SUM(CF3:CF${lastRow})`);
+    applyTotal('CC', `SUM(S${totalRowIdx}:CB${totalRowIdx})`);
+    sheet.getCell(`CC${totalRowIdx}`).fill = colorTotalMeals;
+    applyTotal('CH', `SUM(CH3:CH${lastRow})`);
 
     // Fill Bazaar actual data
     let bRow = 3;
     for (const b of bazaars) {
       if (bRow > lastRow) break; // If we exceed student rows, just stop for safety
-      sheet.getCell(`CC${bRow}`).value = new Date(b.date);
-      sheet.getCell(`CC${bRow}`).numFmt = 'dd-mm-yyyy';
-      sheet.getCell(`CD${bRow}`).value = b.name || 'Bazaar';
-      sheet.getCell(`CE${bRow}`).value = b.details || '';
-      sheet.getCell(`CF${bRow}`).value = b.amount;
+      sheet.getCell(`CE${bRow}`).value = new Date(b.date);
+      sheet.getCell(`CE${bRow}`).numFmt = 'dd-mm-yyyy';
+      sheet.getCell(`CF${bRow}`).value = b.name || 'Bazaar';
+      sheet.getCell(`CG${bRow}`).value = b.details || '';
+      sheet.getCell(`CH${bRow}`).value = b.amount;
       bRow++;
     }
 
