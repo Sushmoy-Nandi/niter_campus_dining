@@ -79,23 +79,22 @@ export async function GET(req: Request) {
     const colorI_K = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D2E9' } } as any;
     const colorO_CF = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF9FC5E8' } } as any;
     const colorTotalMeals = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6AA84F' } } as any;
+    const colorDep1 = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } } as any; // Pastel Yellow
+    const colorDep2 = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9CB9C' } } as any; // Pastel Orange
+    const colorDep3 = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFB6D7A8' } } as any; // Pastel Green
 
     // Col widths
     sheet.getColumn('A').width = 4.75;
     sheet.getColumn('B').width = 19.25;
     sheet.getColumn('C').width = 12; // ID
-    sheet.getColumn('D').width = 13.88; // Info
+    sheet.getColumn('D').width = 25.0; // Info
     sheet.getColumn('E').width = 10.75;
     sheet.getColumn('F').width = 10.5;
     sheet.getColumn('G').width = 11.13;
-    sheet.getColumn('H').width = 9.38;
-    sheet.getColumn('H').width = 4.75;
+    sheet.getColumn('H').width = 12.0;
     sheet.getColumn('J').width = 10.75;
     sheet.getColumn('L').width = 11.25;
-    sheet.getColumn('L').width = 11.25;
-    sheet.getColumn('L').width = 7.13;
     sheet.getColumn('N').width = 16.88;
-    sheet.getColumn('N').width = 6.63;
     sheet.getColumn('P').width = 4.88;
     sheet.getColumn('Q').width = 21.75;
     sheet.getColumn('R').width = 12; // ID
@@ -148,9 +147,9 @@ export async function GET(req: Request) {
     const lastRow = students.length + 2; // e.g. 302 if 300 students
     const totalRowIdx = lastRow + 1; // e.g. 303
     
-    setHeader('E', { formula: `="Deposite 1 "&CHAR(10)&SUM(E${totalRowIdx}+0)` }, '', colorA_G);
-    setHeader('F', { formula: `="Deposite 2 "&CHAR(10)&SUM(F${totalRowIdx}+0)` }, '', colorA_G);
-    setHeader('G', { formula: `="Deposite 3 "&CHAR(10)&SUM(G${totalRowIdx}+0)` }, '', colorA_G);
+    setHeader('E', { formula: `="Deposite 1 "&CHAR(10)&SUM(E${totalRowIdx}+0)` }, '', colorDep1);
+    setHeader('F', { formula: `="Deposite 2 "&CHAR(10)&SUM(F${totalRowIdx}+0)` }, '', colorDep2);
+    setHeader('G', { formula: `="Deposite 3 "&CHAR(10)&SUM(G${totalRowIdx}+0)` }, '', colorDep3);
     setHeader('H', { formula: `="Total Deposite "&CHAR(10)&SUM(H${totalRowIdx}+0)` }, '', colorA_G);
 
     setHeader('J', 'Deposite', '', colorI_K);

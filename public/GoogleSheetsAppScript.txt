@@ -59,16 +59,21 @@ function buildSheetWithData(data) {
   const colorO_CF = '#9fc5e8';
   const colorTotalMeals = '#6aa84f';
   
+  // Custom colorful deposits
+  const colorDep1 = '#ffe599'; // Pastel Yellow
+  const colorDep2 = '#f9cb9c'; // Pastel Orange
+  const colorDep3 = '#b6d7a8'; // Pastel Green
+  
   // Freeze panes
   sheet.setFrozenRows(2);
   sheet.setFrozenColumns(3);
 
   // Column Widths
-  sheet.setColumnWidth(1, 40); // A: SL
-  sheet.setColumnWidth(2, 150); // B: Name
-  sheet.setColumnWidth(3, 80); // C: ID
-  sheet.setColumnWidth(4, 110); // D: Info
-  sheet.setColumnWidth(5, 85); // E: Deposite 1
+  sheet.setColumnWidth(1, 40); // A
+  sheet.setColumnWidth(2, 160); // B
+  sheet.setColumnWidth(3, 100); // C
+  sheet.setColumnWidth(4, 200); // D (increased to prevent truncation)
+  sheet.setColumnWidth(5, 100); // E: Deposite 1
   sheet.setColumnWidth(6, 85); // F: Deposite 2
   sheet.setColumnWidth(7, 90); // G: Deposite 3
   sheet.setColumnWidth(8, 75); // H: Total Deposite
@@ -126,12 +131,15 @@ function buildSheetWithData(data) {
   setHeader(3, 'ID', '', colorA_G);
   setHeader(4, 'Info', '', colorA_G);
   
-  sheet.getRange(1, 5).setFormula(`="Deposite 1 "&CHAR(10)&SUM(H${totalRowIdx}+0)`);
-  sheet.getRange(1, 8, 2, 1).merge().setFontWeight("bold").setBackground(colorA_G).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
-  sheet.getRange(1, 6).setFormula(`="Deposite 2 "&CHAR(10)&SUM(H${totalRowIdx}+0)`);
-  sheet.getRange(1, 8, 2, 1).merge().setFontWeight("bold").setBackground(colorA_G).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
-  sheet.getRange(1, 7).setFormula(`="Deposite 3 "&CHAR(10)&SUM(H${totalRowIdx}+0)`);
-  sheet.getRange(1, 8, 2, 1).merge().setFontWeight("bold").setBackground(colorA_G).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
+  sheet.getRange(1, 5).setFormula(`="Deposite 1 "&CHAR(10)&SUM(E${totalRowIdx}+0)`);
+  sheet.getRange(1, 5, 2, 1).merge().setFontWeight("bold").setBackground(colorDep1).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
+  
+  sheet.getRange(1, 6).setFormula(`="Deposite 2 "&CHAR(10)&SUM(F${totalRowIdx}+0)`);
+  sheet.getRange(1, 6, 2, 1).merge().setFontWeight("bold").setBackground(colorDep2).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
+  
+  sheet.getRange(1, 7).setFormula(`="Deposite 3 "&CHAR(10)&SUM(G${totalRowIdx}+0)`);
+  sheet.getRange(1, 7, 2, 1).merge().setFontWeight("bold").setBackground(colorDep3).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
+  
   sheet.getRange(1, 8).setFormula(`="Total Deposite "&CHAR(10)&SUM(H${totalRowIdx}+0)`);
   sheet.getRange(1, 8, 2, 1).merge().setFontWeight("bold").setBackground(colorA_G).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
 
