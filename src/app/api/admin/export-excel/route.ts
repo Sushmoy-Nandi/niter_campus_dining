@@ -282,7 +282,7 @@ export async function GET(req: Request) {
       }
 
       const cost = totalMealsForStudent * mealRate;
-      const effectiveDeposit = balance + cost;
+      const effectiveDeposit = balance;
 
       applyCell('A', student.diningId);
       applyCell('B', student.name);

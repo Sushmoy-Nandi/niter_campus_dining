@@ -100,7 +100,7 @@ export async function GET(req: Request) {
     }
 
     const cost = totalMeals * mealRate;
-    const effectiveDeposit = balance + cost;
+    const effectiveDeposit = balance;
 
     const row = [
       sl++,

@@ -28,8 +28,21 @@ export async function GET(req: Request) {
       orderBy: { diningId: 'asc' }
     })
 
-    const periodDepositMap = await getStudentPeriodDeposits(activePeriod)
-    
+    const rawDeposits = await prisma.transaction.findMany({
+      where: {
+        type: "DEPOSIT",
+        createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
+      },
+      orderBy: { createdAt: "asc" }
+    });
+
+    const studentDepositsMap = new Map<string, number[]>();
+    for (const d of rawDeposits) {
+      if (!studentDepositsMap.has(d.studentId)) {
+        studentDepositsMap.set(d.studentId, []);
+      }
+      studentDepositsMap.get(d.studentId)!.push(d.amount);
+    }
     const periodStart = new Date(activePeriod.startDate)
     const periodEnd = new Date(activePeriod.endDate)
     periodEnd.setHours(23, 59, 59, 999) // Force end of day
@@ -73,14 +86,14 @@ export async function GET(req: Request) {
       })),
       students: students.map(student => {
         const balance = student.wallet?.balance || 0;
-        const depositTx = periodDepositMap.get(student.id) || 0;
-        
+        const depositTxs = studentDepositsMap.get(student.id) || [];
+        const sumTxs = depositTxs.reduce((a, b) => a + b, 0);
         const meals: { l: number, d: number }[] = [];
         let totalMealsCount = 0;
         
         daysList.forEach(dayIso => {
           const d = new Date(dayIso);
-          const { autoOff } = isStudentAutoOff(balance, activePeriod, d, depositTx);
+          const { autoOff } = isStudentAutoOff(balance, activePeriod, d, sumTxs);
           if (autoOff) {
             meals.push({ l: 0, d: 0 });
           } else {
@@ -93,17 +106,17 @@ export async function GET(req: Request) {
           }
         });
 
-        // The exact cost this student has incurred so far in this period
-        // We calculate this server-side to reverse-engineer their "Effective Deposit"
-        // This guarantees that On-Hand (Deposit - Cost) matches the true wallet balance.
-        const { mealRate } = calculateDynamicMealRateResult;
-        const effectiveDeposit = balance + (totalMealsCount * mealRate);
+        // Wallet balance represents the TOTAL money they have (carry-over + new deposits)
+        // because meal costs are only permanently deducted at the end of the month.
+        const carryOver = balance - sumTxs;
+        const depositsArray = [carryOver > 0 ? carryOver : 0, ...depositTxs];
 
         return {
           name: student.name,
           diningId: student.diningId,
           department: student.department || '',
-          deposit: effectiveDeposit,
+          deposit: balance,
+          deposits: depositsArray,
           meals: meals
         }
       })
