@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { depositSchema } from "@/lib/validations"
 import { sendEmail } from "@/lib/email"
 import { isStudentAutoOff } from "@/lib/meal-utils"
+import { triggerLiveSheetSync } from "@/lib/google-sync"
 
 export async function GET(req: NextRequest) {
   try {
@@ -127,6 +128,9 @@ export async function POST(req: NextRequest) {
 
       return transaction
     })
+
+    // Trigger Google Sheets live sync in background
+    triggerLiveSheetSync();
 
     // Fire and forget email notification
     sendEmail(

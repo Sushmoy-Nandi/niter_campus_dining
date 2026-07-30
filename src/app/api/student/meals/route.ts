@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getCurrentMealRates, isStudentAutoOff } from "@/lib/meal-utils"
+import { triggerLiveSheetSync } from "@/lib/google-sync"
 
 export async function GET(req: NextRequest) {
   try {
@@ -174,6 +175,8 @@ export async function POST(req: NextRequest) {
         dinner: dinner ?? true,
       },
     })
+
+    triggerLiveSheetSync();
 
     return NextResponse.json({ schedule })
   } catch (error) {

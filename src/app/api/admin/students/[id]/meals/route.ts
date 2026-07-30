@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { triggerLiveSheetSync } from "@/lib/google-sync"
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -35,6 +36,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         dinner: dinner ?? true,
       },
     })
+
+    triggerLiveSheetSync();
 
     return NextResponse.json({ schedule })
   } catch (error) {

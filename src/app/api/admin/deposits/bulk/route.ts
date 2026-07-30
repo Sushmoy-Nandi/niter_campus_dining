@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { sendEmail } from "@/lib/email"
+import { triggerLiveSheetSync } from "@/lib/google-sync"
 
 export async function POST(req: NextRequest) {
   try {
@@ -113,6 +114,10 @@ export async function POST(req: NextRequest) {
         results.failed++;
         results.errors.push(`Error processing ${d.diningId}: ${err.message}`);
       }
+    }
+
+    if (results.successful > 0) {
+      triggerLiveSheetSync();
     }
 
     return NextResponse.json({ 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { triggerLiveSheetSync } from "@/lib/google-sync";
 
 export async function POST(req: NextRequest) {
   try {
@@ -93,6 +94,9 @@ export async function POST(req: NextRequest) {
         }
       });
     });
+
+    // Trigger google sheets live sync in background
+    triggerLiveSheetSync();
 
     return NextResponse.json({ 
       success: true, 
