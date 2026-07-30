@@ -245,7 +245,7 @@ function buildSheetWithData(data) {
     // P to BZ
     sheet.getRange(3, 16, data.students.length, 66).setBorder(true, true, true, true, false, false);
     
-    sheet.getRange(3, 81, data.students.length, 1).setBackground(colorTotalMeals);
+    sheet.getRange(3, 81, data.students.length, 1).setBackground(colorTotalMeals).setNumberFormat('0');
 
     // Apply strict number formatting to money columns to prevent Date misinterpretations
     sheet.getRange(3, 5, data.students.length, 4).setNumberFormat('0.00'); // E,F,G,H
@@ -254,12 +254,18 @@ function buildSheetWithData(data) {
   
   // Write N formulas here so they are not overwritten by the bulk empty string fill
   sheet.getRange('N3').setFormula('=IFERROR(N11/N7, 0)').setHorizontalAlignment("center").setFontWeight("bold").setNumberFormat('0.00');
-  sheet.getRange('N6').setValue('Total Meal Count').setFontWeight("bold");
-  sheet.getRange('N7').setFormula(`=SUM(CC3:CC${lastRow})`);
-  sheet.getRange('N10').setValue('Total Cost').setFontWeight("bold");
-  sheet.getRange('N11').setFormula(`=SUM(CH3:CH${lastRow})`).setNumberFormat('0.00');
-  sheet.getRange('N13').setValue('On-Hand').setFontWeight("bold");
-  sheet.getRange('N14').setFormula(`=SUM(L3:L${lastRow})`).setNumberFormat('0.00');
+  sheet.getRange('N6').setValue('Total Meal Count').setFontWeight("bold").setHorizontalAlignment("center");
+  sheet.getRange('N7').setFormula(`=SUM(CC3:CC${lastRow})`).setNumberFormat('0').setHorizontalAlignment("center");
+  sheet.getRange('N10').setValue('Total Cost').setFontWeight("bold").setHorizontalAlignment("center");
+  sheet.getRange('N11').setFormula(`=SUM(CH3:CH${lastRow})`).setNumberFormat('0.00').setHorizontalAlignment("center");
+  sheet.getRange('N13').setValue('On-Hand').setFontWeight("bold").setHorizontalAlignment("center");
+  sheet.getRange('N14').setFormula(`=SUM(L3:L${lastRow})`).setNumberFormat('0.00').setHorizontalAlignment("center");
+
+  // Apply borders to the N column blocks
+  sheet.getRange('N2:N3').setBorder(true, true, true, true, false, false);
+  sheet.getRange('N6:N7').setBorder(true, true, true, true, false, false);
+  sheet.getRange('N10:N11').setBorder(true, true, true, true, false, false);
+  sheet.getRange('N13:N14').setBorder(true, true, true, true, false, false);
   
   // TOTALS Row
   const tr = totalRowIdx;
@@ -280,8 +286,8 @@ function buildSheetWithData(data) {
   let bRow = 3;
   for (const b of data.bazaars) {
     if (bRow > lastRow) break;
-    sheet.getRange(bRow, 85).setValue(new Date(b.date)).setNumberFormat('dd-mm-yyyy').setBorder(true, true, true, true, false, false);
-    sheet.getRange(bRow, 86).setValue(b.name || 'Bazaar').setBorder(true, true, true, true, false, false);
+    sheet.getRange(bRow, 83).setValue(new Date(b.date)).setNumberFormat('dd-MMM-yyyy').setBorder(true, true, true, true, false, false);
+    sheet.getRange(bRow, 84).setValue(b.name || 'Bazaar').setBorder(true, true, true, true, false, false);
     sheet.getRange(bRow, 85).setValue(b.details || '').setBorder(true, true, true, true, false, false);
     sheet.getRange(bRow, 86).setValue(b.amount).setBorder(true, true, true, true, false, false);
     bRow++;

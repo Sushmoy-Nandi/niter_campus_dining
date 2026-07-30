@@ -214,12 +214,27 @@ export async function GET(req: Request) {
     sheet.getCell('N3').value = { formula: 'IFERROR(N11/N7, 0)' };
     sheet.getCell('N3').font = { ...fontBold, size: 12, color: { argb: 'FFFF0000' } }; // Make it pop just in case
     sheet.getCell('N3').alignment = alignCenter;
+    
+    // N block formatting
+    ['N2', 'N3', 'N6', 'N7', 'N10', 'N11', 'N13', 'N14'].forEach(cellRef => {
+        sheet.getCell(cellRef).border = borderStyle;
+        sheet.getCell(cellRef).alignment = alignCenter;
+    });
+
     sheet.getCell('N6').value = 'Total Meal Count';
+    sheet.getCell('N6').font = fontBold;
     sheet.getCell(`N7`).value = { formula: `SUM(CC3:CC${lastRow})` };
+    sheet.getCell(`N7`).numFmt = '0';
+    
     sheet.getCell('N10').value = 'Total Cost';
+    sheet.getCell('N10').font = fontBold;
     sheet.getCell(`N11`).value = { formula: `SUM(CH3:CH${lastRow})` };
+    sheet.getCell(`N11`).numFmt = '0.00';
+    
     sheet.getCell('N13').value = 'On-Hand';
+    sheet.getCell('N13').font = fontBold;
     sheet.getCell(`N14`).value = { formula: `SUM(L3:L${lastRow})` };
+    sheet.getCell(`N14`).numFmt = '0.00';
 
     // Students Data
     let r = 3;
@@ -291,6 +306,7 @@ export async function GET(req: Request) {
       cellCA.fill = colorTotalMeals;
       cellCA.alignment = alignCenter;
       cellCA.border = borderStyle;
+      cellCA.numFmt = '0';
 
       // Ensure CF area is clear initially
       applyCell('CE', ''); 
