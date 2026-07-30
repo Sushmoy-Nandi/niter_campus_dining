@@ -151,9 +151,8 @@ function buildSheetWithData(data) {
   
   setHeader(14, 'ID', '', colorO_CF);
   setHeader(15, 'Name', '', colorO_CF);
-  , '', colorO_CF);
   
-  let dateCol = 19; // Q
+  let dateCol = 16; // P
   for (let i = 0; i < 31; i++) {
     const dStr = data.days[i];
     const range = sheet.getRange(1, dateCol);
@@ -278,7 +277,7 @@ function buildSheetWithData(data) {
   sheet.getRange(tr, 8).setFormula(`=SUM(H3:H${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
   sheet.getRange(tr, 8).setFormula(`=SUM(H3:H${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
   
-  for (let c = 19; c <= 80; c++) {
+  for (let c = 16; c <= 77; c++) {
     let ltr = sheet.getRange(1, c).getA1Notation().match(/([A-Z]+)/)[0];
     sheet.getRange(tr, c).setFormula(`=SUM(${ltr}3:${ltr}${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
   }
