@@ -32,6 +32,7 @@ export async function GET(req: Request) {
     
     const periodStart = new Date(activePeriod.startDate)
     const periodEnd = new Date(activePeriod.endDate)
+    periodEnd.setHours(23, 59, 59, 999) // Force end of day
     periodEnd.setUTCHours(23, 59, 59, 999)
 
     const allSchedules = await prisma.mealSchedule.findMany({
