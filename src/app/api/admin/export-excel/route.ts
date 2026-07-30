@@ -164,7 +164,7 @@ export async function GET(req: Request) {
     setHeader('O', 'Name', '', colorO_CF);
 
     let currentDate = new Date(periodStart);
-    let dateCol = 19; // S // Q
+    let dateCol = 16; // P
     for (let i = 0; i < 31; i++) {
       const c1 = r1.getCell(dateCol);
       c1.value = new Date(currentDate);
@@ -319,21 +319,23 @@ export async function GET(req: Request) {
       cell.border = borderStyle;
     };
     
+    applyTotal('C', `SUM(C3:C${lastRow})`);
+    applyTotal('D', `SUM(D3:D${lastRow})`);
     applyTotal('E', `SUM(E3:E${lastRow})`);
     applyTotal('F', `SUM(F3:F${lastRow})`);
-    applyTotal('G', `SUM(G3:G${lastRow})`);
-    applyTotal('H', `SUM(H3:H${lastRow})`);
-
-    let tc = 19; // S
+    
+    // We can also sum Deposite, Cost, On-Hand if desired, but previously it only did E, F, G, H
+    
+    let tc = 16; // P
     for (let i = 0; i < 62; i++) {
       const colLetter = sheet.getColumn(tc).letter;
       applyTotal(colLetter, `SUM(${colLetter}3:${colLetter}${lastRow})`);
       tc++;
     }
 
-    applyTotal('CC', `SUM(S${totalRowIdx}:CB${totalRowIdx})`);
-    sheet.getCell(`CC${totalRowIdx}`).fill = colorTotalMeals;
-    applyTotal('CH', `SUM(CH3:CH${lastRow})`);
+    applyTotal('BZ', `SUM(P${totalRowIdx}:BY${totalRowIdx})`);
+    sheet.getCell(`BZ${totalRowIdx}`).fill = colorTotalMeals;
+    applyTotal('CE', `SUM(CE3:CE${lastRow})`);
 
     // Fill Bazaar actual data
     let bRow = 3;

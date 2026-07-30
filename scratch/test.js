@@ -196,21 +196,23 @@ function buildSheetWithData(data) {
     for (const student of data.students) {
       const row = new Array(86).fill('');
       
-      row[0] = student.diningId;
+      row[0] = sl;
       row[1] = student.name;
-      row[2] = student.deposit;
-      row[3] = 0;
-      row[4] = 0;
-      row[5] = `=SUM(C${r}:E${r})`;
+      row[2] = student.diningId;
+      row[3] = student.department;
+      row[4] = student.deposit;
+      row[6] = 0;
+      row[6] = 0;
+      row[7] = `=SUM(E${r}:G${r})`;
       
-      row[7] = `=SUM(F${r}+0)`;
+            row[7] = `=SUM(F${r}+0)`;
       row[8] = `=BZ${r}*$L$4`;
       row[9] = `=H${r}-I${r}`;
       
-      row[13] = student.diningId;
+            row[13] = student.diningId;
       row[14] = student.name;
       
-      let mc = 15; // 0-indexed for 16(P)
+      let mc = 15; // 0-indexed for 17(Q)
       for (let i = 0; i < 31; i++) {
         const mealData = student.meals[i];
         if (mealData) {
@@ -290,7 +292,7 @@ function buildSheetWithData(data) {
     sheet.getRange(bRow, 80).setValue(new Date(b.date)).setNumberFormat('dd-MMM-yyyy').setBorder(true, true, true, true, false, false);
     sheet.getRange(bRow, 81).setValue(b.name || 'Bazaar').setBorder(true, true, true, true, false, false);
     sheet.getRange(bRow, 82).setValue(b.details || '').setBorder(true, true, true, true, false, false);
-    sheet.getRange(bRow, 83).setValue(b.amount).setBorder(true, true, true, true, false, false);
+    sheet.getRange(bRow, 80).setValue(b.amount).setBorder(true, true, true, true, false, false);
     bRow++;
   }
 }
