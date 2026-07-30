@@ -198,8 +198,8 @@ export async function GET(req: Request) {
     setHeader('CF', 'Cost', '', colorO_CF);
 
     // M formulas
-    sheet.getCell('M3').value = { formula: 'M11/M7' };
-    sheet.getCell('M3').font = fontNormal;
+    sheet.getCell('M3').value = { formula: 'IFERROR(M11/M7, 0)' };
+    sheet.getCell('M3').font = { ...fontBold, size: 12, color: { argb: 'FFFF0000' } }; // Make it pop just in case
     sheet.getCell('M3').alignment = alignCenter;
     sheet.getCell('M6').value = 'Total Meal Count';
     sheet.getCell(`M7`).value = { formula: `SUM(CA3:CA${lastRow})` };

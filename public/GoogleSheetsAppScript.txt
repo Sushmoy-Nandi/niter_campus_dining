@@ -171,7 +171,7 @@ function buildSheetWithData(data) {
   setHeader(84, 'Cost', '', colorO_CF);
 
   // M formulas
-  sheet.getRange('M3').setFormula('=M11/M7').setHorizontalAlignment("center");
+  sheet.getRange('M3').setFormula('=IFERROR(M11/M7, 0)').setHorizontalAlignment("center").setFontWeight("bold");
   sheet.getRange('M6').setValue('Total Meal Count');
   sheet.getRange('M7').setFormula(`=SUM(CA3:CA${lastRow})`);
   sheet.getRange('M10').setValue('Total Cost');
