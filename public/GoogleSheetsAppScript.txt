@@ -61,7 +61,7 @@ function buildSheetWithData(data) {
   
   // Freeze panes
   sheet.setFrozenRows(2);
-  sheet.setFrozenColumns(2);
+  sheet.setFrozenColumns(3);
 
   // Column Widths
   sheet.setColumnWidth(1, 40); // A: SL
@@ -155,7 +155,7 @@ function buildSheetWithData(data) {
     const range = sheet.getRange(1, dateCol);
     
     if (dStr) {
-      range.setValue(new Date(dStr)).setNumberFormat('dd mmmm');
+      range.setValue(new Date(dStr)).setNumberFormat('d-MMM');
     }
     
     range.setFontWeight("bold").setBackground(colorO_CF)
@@ -178,14 +178,7 @@ function buildSheetWithData(data) {
   setHeader(85, 'Bazer Details', '', colorO_CF);
   setHeader(86, 'Cost', '', colorO_CF);
 
-  // M formulas
-  sheet.getRange('N3').setFormula('=IFERROR(N11/N7, 0)').setHorizontalAlignment("center").setFontWeight("bold");
-  sheet.getRange('N6').setValue('Total Meal Count');
-  sheet.getRange('N7').setFormula(`=SUM(CC3:CC${lastRow})`);
-  sheet.getRange('N10').setValue('Total Cost');
-  sheet.getRange('N11').setFormula(`=SUM(CH3:CH${lastRow})`);
-  sheet.getRange('N13').setValue('On-Hand');
-  sheet.getRange('N14').setFormula(`=SUM(L3:L${lastRow})`);
+  // M formulas will be written AFTER bulk write to avoid being overwritten
 
   // Row 3 to lastRow
   if (data.students.length > 0) {
@@ -245,15 +238,28 @@ function buildSheetWithData(data) {
     dataRange.setHorizontalAlignment("center");
     
     // Set specific borders, let's just border the important columns
-    // A to G
+    // A to H
     sheet.getRange(3, 1, data.students.length, 8).setBorder(true, true, true, true, false, false);
-    // I to K
+    // J to L
     sheet.getRange(3, 10, data.students.length, 3).setBorder(true, true, true, true, false, false);
-    // O to BZ
+    // P to BZ
     sheet.getRange(3, 16, data.students.length, 66).setBorder(true, true, true, true, false, false);
     
     sheet.getRange(3, 81, data.students.length, 1).setBackground(colorTotalMeals);
+
+    // Apply strict number formatting to money columns to prevent Date misinterpretations
+    sheet.getRange(3, 5, data.students.length, 4).setNumberFormat('0.00'); // E,F,G,H
+    sheet.getRange(3, 10, data.students.length, 3).setNumberFormat('0.00'); // J,K,L
   }
+  
+  // Write N formulas here so they are not overwritten by the bulk empty string fill
+  sheet.getRange('N3').setFormula('=IFERROR(N11/N7, 0)').setHorizontalAlignment("center").setFontWeight("bold").setNumberFormat('0.00');
+  sheet.getRange('N6').setValue('Total Meal Count').setFontWeight("bold");
+  sheet.getRange('N7').setFormula(`=SUM(CC3:CC${lastRow})`);
+  sheet.getRange('N10').setValue('Total Cost').setFontWeight("bold");
+  sheet.getRange('N11').setFormula(`=SUM(CH3:CH${lastRow})`).setNumberFormat('0.00');
+  sheet.getRange('N13').setValue('On-Hand').setFontWeight("bold");
+  sheet.getRange('N14').setFormula(`=SUM(L3:L${lastRow})`).setNumberFormat('0.00');
   
   // TOTALS Row
   const tr = totalRowIdx;

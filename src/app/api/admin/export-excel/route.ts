@@ -61,7 +61,7 @@ export async function GET(req: Request) {
     workbook.creator = 'Campus Dining System';
     
     const sheet = workbook.addWorksheet(activePeriod.title, {
-      views: [{ state: 'frozen', xSplit: 2, ySplit: 2 }]
+      views: [{ state: 'frozen', xSplit: 3, ySplit: 2 }]
     });
 
     const borderStyle: any = {
@@ -175,7 +175,7 @@ export async function GET(req: Request) {
     for (let i = 0; i < 31; i++) {
       const c1 = r1.getCell(dateCol);
       c1.value = new Date(currentDate);
-      c1.numFmt = 'dd mmmm';
+      c1.numFmt = 'd-MMM';
       c1.font = fontBold;
       c1.fill = colorO_CF;
       c1.alignment = alignCenter;
