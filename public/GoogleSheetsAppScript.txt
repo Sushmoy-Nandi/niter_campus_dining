@@ -139,11 +139,8 @@ function buildSheetWithData(data) {
   setHeader(11, 'Cost', '', colorI_K);
   setHeader(12, 'On-Hand', '', colorI_K);
   
-  // M header (NOT merged, M1 is blank, M2 has text)
-  sheet.getRange(1, 14).setBorder(true, true, true, true, false, false);
-  sheet.getRange(2, 14).setValue('Current Meal Rate').setFontWeight("bold")
-    .setHorizontalAlignment("center").setVerticalAlignment("middle")
-    .setWrap(true).setBorder(true, true, true, true, false, false);
+  // M header (now blank)
+  sheet.getRange(1, 14, 2, 1).setBorder(true, true, true, true, false, false);
   
   setHeader(16, 'SL', '', colorO_CF);
   setHeader(17, 'Name', '', colorO_CF);
@@ -203,7 +200,7 @@ function buildSheetWithData(data) {
       row[7] = `=SUM(E${r}:G${r})`;
       
       row[9] = `=SUM(H${r}+0)`;
-      row[10] = `=CC${r}*$N$3`;
+      row[10] = `=CC${r}*$N$4`;
       row[11] = `=J${r}-K${r}`;
       
       row[15] = sl;
@@ -253,7 +250,8 @@ function buildSheetWithData(data) {
   }
   
   // Write N formulas here so they are not overwritten by the bulk empty string fill
-  sheet.getRange('N3').setFormula('=IFERROR(N11/N7, 0)').setHorizontalAlignment("center").setFontWeight("bold").setNumberFormat('0.00');
+  sheet.getRange('N3').setValue('Current Meal Rate').setFontWeight("bold").setHorizontalAlignment("center");
+  sheet.getRange('N4').setFormula('=IFERROR(N11/N7, 0)').setHorizontalAlignment("center").setFontWeight("bold").setNumberFormat('0.00');
   sheet.getRange('N6').setValue('Total Meal Count').setFontWeight("bold").setHorizontalAlignment("center");
   sheet.getRange('N7').setFormula(`=SUM(CC3:CC${lastRow})`).setNumberFormat('0').setHorizontalAlignment("center");
   sheet.getRange('N10').setValue('Total Cost').setFontWeight("bold").setHorizontalAlignment("center");
@@ -262,7 +260,7 @@ function buildSheetWithData(data) {
   sheet.getRange('N14').setFormula(`=SUM(L3:L${lastRow})`).setNumberFormat('0.00').setHorizontalAlignment("center");
 
   // Apply borders to the N column blocks
-  sheet.getRange('N2:N3').setBorder(true, true, true, true, false, false);
+  sheet.getRange('N3:N4').setBorder(true, true, true, true, false, false);
   sheet.getRange('N6:N7').setBorder(true, true, true, true, false, false);
   sheet.getRange('N10:N11').setBorder(true, true, true, true, false, false);
   sheet.getRange('N13:N14').setBorder(true, true, true, true, false, false);

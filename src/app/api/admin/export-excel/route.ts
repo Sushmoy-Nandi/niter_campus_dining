@@ -157,13 +157,9 @@ export async function GET(req: Request) {
     setHeader('K', 'Cost', '', colorI_K);
     setHeader('L', 'On-Hand', '', colorI_K);
 
-    // M header (NOT merged, M1 is blank, M2 has text)
     const m1 = r1.getCell('N');
     m1.border = borderStyle;
     const m2 = r2.getCell('N');
-    m2.value = 'Current Meal Rate';
-    m2.font = fontBold;
-    m2.alignment = alignCenter;
     m2.border = borderStyle;
 
     setHeader('P', 'SL', '', colorO_CF);
@@ -211,12 +207,14 @@ export async function GET(req: Request) {
     setHeader('CH', 'Cost', '', colorO_CF);
 
     // M formulas
-    sheet.getCell('N3').value = { formula: 'IFERROR(N11/N7, 0)' };
-    sheet.getCell('N3').font = { ...fontBold, size: 12, color: { argb: 'FFFF0000' } }; // Make it pop just in case
-    sheet.getCell('N3').alignment = alignCenter;
+    sheet.getCell('N3').value = 'Current Meal Rate';
+    sheet.getCell('N3').font = fontBold;
+    sheet.getCell('N4').value = { formula: 'IFERROR(N11/N7, 0)' };
+    sheet.getCell('N4').font = { ...fontBold, size: 12, color: { argb: 'FFFF0000' } }; // Make it pop just in case
+    sheet.getCell('N4').alignment = alignCenter;
     
     // N block formatting
-    ['N2', 'N3', 'N6', 'N7', 'N10', 'N11', 'N13', 'N14'].forEach(cellRef => {
+    ['N3', 'N4', 'N6', 'N7', 'N10', 'N11', 'N13', 'N14'].forEach(cellRef => {
         sheet.getCell(cellRef).border = borderStyle;
         sheet.getCell(cellRef).alignment = alignCenter;
     });
@@ -263,7 +261,7 @@ export async function GET(req: Request) {
       applyCell('H', { formula: `SUM(E${r}:G${r})` });
       
       applyCell('J', { formula: `SUM(H${r}+0)` });
-      applyCell('K', { formula: `CC${r}*$N$3` }); // Calculates live cost
+      applyCell('K', { formula: `CC${r}*$N$4` }); // Calculates live cost
       applyCell('L', { formula: `J${r}-K${r}` }); // Calculates live balance
       
       applyCell('P', sl);
