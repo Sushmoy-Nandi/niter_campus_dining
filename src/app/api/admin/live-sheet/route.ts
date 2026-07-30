@@ -8,7 +8,8 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const secret = searchParams.get("secret")
   
-  if (secret !== "NITER_MASTER_2026") {
+  const expectedSecret = process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026"
+  if (secret !== expectedSecret) {
     return new NextResponse("Unauthorized. Invalid secret key.", { status: 401 })
   }
 

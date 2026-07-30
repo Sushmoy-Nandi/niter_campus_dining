@@ -241,7 +241,10 @@ export default function AdminReports() {
              <p className="text-sm text-muted-foreground">No periods available</p>
           )}
           <div className="flex gap-2">
-            <Button onClick={() => window.open('/api/admin/live-sheet?secret=NITER_MASTER_2026', '_blank')} variant="default" className="bg-green-600 hover:bg-green-700 text-white font-bold">
+            <Button onClick={() => {
+              const secret = process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026";
+              window.open(`/api/admin/live-sheet?secret=${secret}`, '_blank');
+            }} variant="default" className="bg-green-600 hover:bg-green-700 text-white font-bold">
               <Download className="mr-2 h-4 w-4" /> Live Master CSV
             </Button>
             <Button onClick={exportCSV} variant="outline" disabled={periods.length === 0 || report.length === 0}>
@@ -289,7 +292,7 @@ export default function AdminReports() {
             <li>Copy and paste this exact formula:</li>
           </ol>
           <div className="mt-3 p-3 bg-black text-green-400 font-mono text-xs rounded-md overflow-x-auto whitespace-nowrap">
-            =IMPORTDATA(&quot;{typeof window !== 'undefined' ? window.location.origin : ''}/api/admin/live-sheet?secret=NITER_MASTER_2026&quot;)
+            =IMPORTDATA(&quot;{typeof window !== 'undefined' ? window.location.origin : ''}/api/admin/live-sheet?secret={process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026"}&quot;)
           </div>
         </CardContent>
       </Card>
