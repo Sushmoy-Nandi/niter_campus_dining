@@ -14,7 +14,7 @@ const CONFIG = {
   // Replace with your actual live deployed URL (e.g., https://your-app.vercel.app)
   API_URL: 'http://localhost:3000', 
   // Replace with your NEXT_PUBLIC_MASTER_SHEET_SECRET
-  SECRET_KEY: 'NITER_MASTER_2026'
+  SECRET_KEY: 'YOUR_SECRET_KEY_HERE'
 };
 
 function onOpen() {
