@@ -270,8 +270,18 @@ function buildSheetWithData(data) {
   }
 }
 
+function syncLiveMasterSheetBackground() {
+  try {
+    const response = UrlFetchApp.fetch(`${CONFIG.API_URL}/api/admin/live-json?secret=${CONFIG.SECRET_KEY}`);
+    const data = JSON.parse(response.getContentText());
+    buildSheetWithData(data);
+  } catch (error) {
+    console.error("Background sync error: " + error.message);
+  }
+}
+
 function doPost(e) {
-  // This runs the sync whenever the website pings it
-  syncLiveMasterSheet();
+  // This runs the sync whenever the website pings it, without crashing on getUi()
+  syncLiveMasterSheetBackground();
   return ContentService.createTextOutput("Sync triggered successfully!");
 }
