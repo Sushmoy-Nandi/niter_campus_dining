@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getStudentPeriodDeposits, isStudentAutoOff } from "@/lib/meal-utils"
 import ExcelJS from "exceljs"
+import { auth } from "@/lib/auth"
 
 export const dynamic = 'force-dynamic'
 
@@ -11,9 +12,14 @@ export async function GET(req: Request) {
     const secret = searchParams.get("secret")
     
     // Optional secret check if they want to access it outside the app
-    const expectedSecret = process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026"
-    if (secret && secret !== expectedSecret) {
-      return new NextResponse("Unauthorized. Invalid secret key.", { status: 401 })
+    const expectedSecret = process.env.MASTER_SHEET_SECRET || process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026"
+    
+    // Authenticate either via admin session or valid secret key
+    const session = await auth()
+    const isAdmin = session?.user?.role === 'ADMIN'
+    
+    if (!isAdmin && (!secret || secret !== expectedSecret)) {
+      return new NextResponse("Unauthorized. Invalid secret key or session.", { status: 401 })
     }
 
     const activePeriod = await prisma.diningPeriod.findFirst({

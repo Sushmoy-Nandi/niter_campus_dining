@@ -9,8 +9,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const secret = searchParams.get("secret")
     
-    const expectedSecret = process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026"
-    if (secret && secret !== expectedSecret) {
+    const expectedSecret = process.env.MASTER_SHEET_SECRET || process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026"
+    if (!secret || secret !== expectedSecret) {
       return new NextResponse("Unauthorized. Invalid secret key.", { status: 401 })
     }
 

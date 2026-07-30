@@ -26,11 +26,9 @@ function onOpen() {
 
 function syncLiveMasterSheet() {
   const ui = SpreadsheetApp.getUi();
-  
   try {
     const response = UrlFetchApp.fetch(`${CONFIG.API_URL}/api/admin/live-json?secret=${CONFIG.SECRET_KEY}`);
     const data = JSON.parse(response.getContentText());
-    
     buildSheetWithData(data);
     ui.alert('Success', `Live data for "${data.period.title}" has been successfully synced and formatted!`, ui.ButtonSet.OK);
   } catch (error) {
@@ -48,10 +46,10 @@ function buildSheetWithData(data) {
     sheet.clear();
   }
   
-  // Set basic dimensions (max 305 rows, 84 columns)
+  // Set basic dimensions (max 305 rows, 83 columns)
   const requiredRows = Math.max(305, data.students.length + 10);
   if (sheet.getMaxRows() < requiredRows) sheet.insertRowsAfter(sheet.getMaxRows(), requiredRows - sheet.getMaxRows());
-  if (sheet.getMaxColumns() < 86) sheet.insertColumnsAfter(sheet.getMaxColumns(), 86 - sheet.getMaxColumns());
+  if (sheet.getMaxColumns() < 83) sheet.insertColumnsAfter(sheet.getMaxColumns(), 83 - sheet.getMaxColumns());
   
   // Colors
   const colorA_G = '#c9daf8';
@@ -64,45 +62,42 @@ function buildSheetWithData(data) {
   const colorDep2 = '#f9cb9c'; // Pastel Orange
   const colorDep3 = '#b6d7a8'; // Pastel Green
   
-  // Freeze panes
+  // Freeze panes up to Name (Col B)
   sheet.setFrozenRows(2);
   sheet.setFrozenColumns(2);
-
-  // Column Widths
-    sheet.setColumnWidth(1, 100); // A: ID
-  sheet.setColumnWidth(2, 160); // B: Name
-  sheet.setColumnWidth(3, 100); // C: Deposite 1
-  sheet.setColumnWidth(4, 100); // D: Deposite 2
-  sheet.setColumnWidth(5, 100); // E: Deposite 3
-  sheet.setColumnWidth(6, 75);  // F: Total Deposite
-  sheet.setColumnWidth(7, 20);  // G: Sep
-  sheet.setColumnWidth(8, 100); // H: Deposite
-  sheet.setColumnWidth(9, 40); // I: Blank
-  sheet.setColumnWidth(10, 85); // J: Deposite
-  sheet.setColumnWidth(11, 90); // K: Cost
-  sheet.setColumnWidth(12, 90); // L: On-Hand
-  sheet.setColumnWidth(13, 60); // M: Blank
-  sheet.setColumnWidth(14, 135); // N: Meal Rate
-  sheet.setColumnWidth(15, 55); // O: Blank
-   // P: SL
-  sheet.setColumnWidth(17, 170); // Q: Name
-   // R: ID
   
-  // Q to BZ (Dates)
+  // --- COLUMN WIDTHS ---
+  sheet.setColumnWidth(1, 100); // A: ID
+  sheet.setColumnWidth(2, 160); // B: Name
+  sheet.setColumnWidth(3, 110); // C: Deposit 1
+  sheet.setColumnWidth(4, 110); // D: Deposit 2
+  sheet.setColumnWidth(5, 110); // E: Deposit 3
+  sheet.setColumnWidth(6, 115); // F: Total Deposit
+  sheet.setColumnWidth(7, 35);  // G: Blank
+  sheet.setColumnWidth(8, 95);  // H: Deposit
+  sheet.setColumnWidth(9, 95);  // I: Cost
+  sheet.setColumnWidth(10, 95); // J: On-Hand
+  sheet.setColumnWidth(11, 35); // K: Blank
+  sheet.setColumnWidth(12, 140);// L: Meal Rate Summary Block
+  sheet.setColumnWidth(13, 35); // M: Blank
+  sheet.setColumnWidth(14, 100);// N: ID
+  sheet.setColumnWidth(15, 170);// O: Name
+  
+  // P to BY (31 Dates - 2 columns each L/D = 62 columns)
   let cIndex = 16;
   for (let i = 0; i < 31; i++) {
-    sheet.setColumnWidth(cIndex, 35);
-    sheet.setColumnWidth(cIndex + 1, 35);
+    sheet.setColumnWidth(cIndex, 32);
+    sheet.setColumnWidth(cIndex + 1, 32);
     cIndex += 2;
   }
   
-  sheet.setColumnWidth(81, 70); // CC: Total Meals
-  sheet.setColumnWidth(82, 40); // CD: Blank
-  sheet.setColumnWidth(83, 140); // CE: Date
-  sheet.setColumnWidth(84, 190); // CF: Name
-  sheet.setColumnWidth(85, 350); // CG: Bazer Details
-  sheet.setColumnWidth(86, 120); // CH: Cost
-
+  sheet.setColumnWidth(78, 75); // BZ: Total Meals
+  sheet.setColumnWidth(79, 35); // CA: Blank
+  sheet.setColumnWidth(80, 110);// CB: Date
+  sheet.setColumnWidth(81, 160);// CC: Name
+  sheet.setColumnWidth(82, 300);// CD: Bazaar Details
+  sheet.setColumnWidth(83, 110);// CE: Cost
+  
   // --- ROW 1 & 2 HEADERS ---
   sheet.setRowHeight(1, 40);
   sheet.setRowHeight(2, 25);
@@ -112,7 +107,7 @@ function buildSheetWithData(data) {
     range1.setValue(val1).setFontWeight("bold").setBackground(color)
       .setHorizontalAlignment("center").setVerticalAlignment("middle")
       .setWrap(true).setBorder(true, true, true, true, false, false);
-      
+    
     if (merge) {
       sheet.getRange(1, col, 2, 1).merge();
     } else {
@@ -125,92 +120,80 @@ function buildSheetWithData(data) {
   
   const lastRow = data.students.length + 2;
   const totalRowIdx = lastRow + 1;
-
-    setHeader(1, 'ID', '', colorA_G);
+  
+  // Left Section Headers
+  setHeader(1, 'ID', '', colorA_G);
   setHeader(2, 'Name', '', colorA_G);
   
-  
-  sheet.getRange(1, 3).setFormula(`="Deposite 1 "&CHAR(10)&SUM(C${totalRowIdx}+0)`);
-  sheet.getRange(1, 3, 2, 1).merge().setFontWeight("bold").setBackground(colorDep1).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
-  
-  sheet.getRange(1, 4).setFormula(`="Deposite 2 "&CHAR(10)&SUM(D${totalRowIdx}+0)`);
-  sheet.getRange(1, 4, 2, 1).merge().setFontWeight("bold").setBackground(colorDep2).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
-  
-  sheet.getRange(1, 3).setFormula(`="Deposite 1 "&CHAR(10)&SUM(C${totalRowIdx}+0)`);
-  sheet.getRange(1, 3, 2, 1).merge().setFontWeight("bold").setBackground(colorDep3).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
-  
-  sheet.getRange(1, 4).setFormula(`="Deposite 2 "&CHAR(10)&SUM(D${totalRowIdx}+0)`);
-  sheet.getRange(1, 4, 2, 1).merge().setFontWeight("bold").setBackground(colorA_G).setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
-
-  setHeader(8, 'Deposite', '', colorI_K);
+  // Deposit Header Formulas with explicitly formatted totals
+  sheet.getRange(1, 3).setFormula(`="Deposit 1 "&CHAR(10)&TEXT(SUM(C${totalRowIdx}+0), "0.00")`);
+  sheet.getRange(1, 3, 2, 1).merge().setFontWeight("bold").setBackground(colorDep1)
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
+    
+  sheet.getRange(1, 4).setFormula(`="Deposit 2 "&CHAR(10)&TEXT(SUM(D${totalRowIdx}+0), "0.00")`);
+  sheet.getRange(1, 4, 2, 1).merge().setFontWeight("bold").setBackground(colorDep2)
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
+    
+  sheet.getRange(1, 5).setFormula(`="Deposit 3 "&CHAR(10)&TEXT(SUM(E${totalRowIdx}+0), "0.00")`);
+  sheet.getRange(1, 5, 2, 1).merge().setFontWeight("bold").setBackground(colorDep3)
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
+    
+  sheet.getRange(1, 6).setFormula(`="Total Deposit "&CHAR(10)&TEXT(SUM(F${totalRowIdx}+0), "0.00")`);
+  sheet.getRange(1, 6, 2, 1).merge().setFontWeight("bold").setBackground(colorA_G)
+    .setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
+    
+  setHeader(8, 'Deposit', '', colorI_K);
   setHeader(9, 'Cost', '', colorI_K);
   setHeader(10, 'On-Hand', '', colorI_K);
   
-  // M header (now blank)
-  sheet.getRange(1, 14, 2, 1).setBorder(true, true, true, true, false, false);
-  
+  // Right Section Headers
   setHeader(14, 'ID', '', colorO_CF);
   setHeader(15, 'Name', '', colorO_CF);
   
-  let dateCol = 16; // P
+  let dateCol = 16; // Col P
   for (let i = 0; i < 31; i++) {
     const dStr = data.days[i];
     const range = sheet.getRange(1, dateCol);
-    
     if (dStr) {
       range.setValue(new Date(dStr)).setNumberFormat('d-MMM');
     }
-    
     range.setFontWeight("bold").setBackground(colorO_CF)
       .setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
-      
     sheet.getRange(1, dateCol, 1, 2).merge();
     sheet.getRange(1, dateCol + 1).setBorder(true, true, true, true, false, false);
-    
     sheet.getRange(2, dateCol).setValue('L').setFontWeight("normal").setBackground(colorO_CF)
       .setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
     sheet.getRange(2, dateCol + 1).setValue('D').setFontWeight("normal").setBackground(colorO_CF)
       .setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
-    
     dateCol += 2;
   }
   
   setHeader(78, 'Total Meals', '', colorO_CF);
   setHeader(80, 'Date', '', colorO_CF);
   setHeader(81, 'Name', '', colorO_CF);
-  setHeader(82, 'Bazer Details', '', colorO_CF);
+  setHeader(82, 'Bazaar Details', '', colorO_CF);
   setHeader(83, 'Cost', '', colorO_CF);
-
-  // M formulas will be written AFTER bulk write to avoid being overwritten
-
-  // Row 3 to lastRow
+  
+  // --- STUDENT ROWS DATA ---
   if (data.students.length > 0) {
     let r = 3;
-    let sl = 1;
-    
-    // We will build a 2D array for faster writes
     const values = [];
-    const backgrounds = [];
-    const weights = [];
     
     for (const student of data.students) {
-      const row = new Array(86).fill('');
+      const row = new Array(83).fill('');
+      row[0] = student.diningId; // A: ID
+      row[1] = student.name;     // B: Name
+      row[2] = student.deposit;  // C: Deposit 1
+      row[3] = 0;                // D: Deposit 2
+      row[4] = 0;                // E: Deposit 3
+      row[5] = `=SUM(C${r}:E${r})`; // F: Total Deposit
+      row[7] = `=SUM(F${r}+0)`;    // H: Deposit
+      row[8] = `=BZ${r}*$L$4`;     // I: Cost
+      row[9] = `=H${r}-I${r}`;     // J: On-Hand
+      row[13] = student.diningId; // N: ID
+      row[14] = student.name;     // O: Name
       
-      row[0] = student.diningId;
-      row[1] = student.name;
-      row[2] = student.deposit;
-      row[3] = 0;
-      row[4] = 0;
-      row[5] = `=SUM(C${r}:E${r})`;
-      
-      row[7] = `=SUM(F${r}+0)`;
-      row[8] = `=BZ${r}*$L$4`;
-      row[9] = `=H${r}-I${r}`;
-      
-      row[13] = student.diningId;
-      row[14] = student.name;
-      
-      let mc = 15; // 0-indexed for 16(P)
+      let mc = 15; // Col P
       for (let i = 0; i < 31; i++) {
         const mealData = student.meals[i];
         if (mealData) {
@@ -222,37 +205,27 @@ function buildSheetWithData(data) {
         }
         mc += 2;
       }
-      
-      row[77] = `=SUM(P${r}:BY${r})`;
-      
+      row[77] = `=SUM(P${r}:BY${r})`; // BZ: Total Meals
       values.push(row);
       r++;
-      sl++;
     }
     
-    // Bulk write the values
-    const dataRange = sheet.getRange(3, 1, data.students.length, 86);
+    const dataRange = sheet.getRange(3, 1, data.students.length, 83);
     dataRange.setValues(values);
-    
-    // Apply borders and alignments to data area
     dataRange.setHorizontalAlignment("center");
     
-    // Set specific borders, let's just border the important columns
-    // A to H
-    sheet.getRange(3, 1, data.students.length, 8).setBorder(true, true, true, true, false, false);
-    // J to L
+    // Set specific borders
+    sheet.getRange(3, 1, data.students.length, 6).setBorder(true, true, true, true, false, false);
     sheet.getRange(3, 8, data.students.length, 3).setBorder(true, true, true, true, false, false);
-    // P to BZ
     sheet.getRange(3, 14, data.students.length, 65).setBorder(true, true, true, true, false, false);
-    
     sheet.getRange(3, 78, data.students.length, 1).setBackground(colorTotalMeals).setNumberFormat('0');
-
-    // Apply strict number formatting to money columns to prevent Date misinterpretations
-    sheet.getRange(3, 3, data.students.length, 4).setNumberFormat('0.00'); // E,F,G,H
-    sheet.getRange(3, 8, data.students.length, 3).setNumberFormat('0.00'); // J,K,L
+    
+    // Strict Number Formats to avoid Date Auto-formatting
+    sheet.getRange(3, 3, data.students.length, 4).setNumberFormat('0.00'); // C, D, E, F
+    sheet.getRange(3, 8, data.students.length, 3).setNumberFormat('0.00'); // H, I, J
   }
   
-  // Write N formulas here so they are not overwritten by the bulk empty string fill
+  // --- MEAL RATE SUMMARY BLOCK (Column L, starts at Row 3) ---
   sheet.getRange('L3').setValue('Current Meal Rate').setFontWeight("bold").setHorizontalAlignment("center");
   sheet.getRange('L4').setFormula('=IFERROR(L11/L7, 0)').setHorizontalAlignment("center").setFontWeight("bold").setNumberFormat('0.00');
   sheet.getRange('L6').setValue('Total Meal Count').setFontWeight("bold").setHorizontalAlignment("center");
@@ -261,36 +234,38 @@ function buildSheetWithData(data) {
   sheet.getRange('L11').setFormula(`=SUM(CE3:CE${lastRow})`).setNumberFormat('0.00').setHorizontalAlignment("center");
   sheet.getRange('L13').setValue('On-Hand').setFontWeight("bold").setHorizontalAlignment("center");
   sheet.getRange('L14').setFormula(`=SUM(J3:J${lastRow})`).setNumberFormat('0.00').setHorizontalAlignment("center");
-
-  // Apply borders to the N column blocks
+  
   sheet.getRange('L3:L4').setBorder(true, true, true, true, false, false);
   sheet.getRange('L6:L7').setBorder(true, true, true, true, false, false);
   sheet.getRange('L10:L11').setBorder(true, true, true, true, false, false);
   sheet.getRange('L13:L14').setBorder(true, true, true, true, false, false);
   
-  // TOTALS Row
+  // --- TOTALS ROW ---
   const tr = totalRowIdx;
-  sheet.getRange(tr, 8).setFormula(`=SUM(H3:H${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
-  sheet.getRange(tr, 8).setFormula(`=SUM(H3:H${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
-  sheet.getRange(tr, 8).setFormula(`=SUM(H3:H${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
-  sheet.getRange(tr, 8).setFormula(`=SUM(H3:H${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
+  sheet.getRange(tr, 3).setFormula(`=SUM(C3:C${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat('0.00');
+  sheet.getRange(tr, 4).setFormula(`=SUM(D3:D${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat('0.00');
+  sheet.getRange(tr, 5).setFormula(`=SUM(E3:E${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat('0.00');
+  sheet.getRange(tr, 6).setFormula(`=SUM(F3:F${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat('0.00').setBorder(true, true, true, true, false, false);
   
   for (let c = 16; c <= 77; c++) {
     let ltr = sheet.getRange(1, c).getA1Notation().match(/([A-Z]+)/)[0];
     sheet.getRange(tr, c).setFormula(`=SUM(${ltr}3:${ltr}${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
   }
   
-  sheet.getRange(tr, 81).setFormula(`=SUM(S${tr}:CB${tr})`).setBackground(colorTotalMeals).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
-  sheet.getRange(tr, 86).setFormula(`=SUM(CE3:CE${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
+  sheet.getRange(tr, 78).setFormula(`=SUM(P${tr}:BY${tr})`).setBackground(colorTotalMeals).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
+  sheet.getRange(tr, 83).setFormula(`=SUM(CE3:CE${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat('0.00').setBorder(true, true, true, true, false, false);
   
-  // Bazaar info
+  // --- BAZAAR SECTION DATA ---
+  const bazaarRowsCount = Math.max(data.bazaars.length, 100);
+  sheet.getRange(3, 83, bazaarRowsCount, 1).setNumberFormat('0.00');
+  
   let bRow = 3;
   for (const b of data.bazaars) {
     if (bRow > lastRow) break;
     sheet.getRange(bRow, 80).setValue(new Date(b.date)).setNumberFormat('dd-MMM-yyyy').setBorder(true, true, true, true, false, false);
     sheet.getRange(bRow, 81).setValue(b.name || 'Bazaar').setBorder(true, true, true, true, false, false);
     sheet.getRange(bRow, 82).setValue(b.details || '').setBorder(true, true, true, true, false, false);
-    sheet.getRange(bRow, 83).setValue(b.amount).setBorder(true, true, true, true, false, false);
+    sheet.getRange(bRow, 83).setValue(Number(b.amount) || 0).setNumberFormat('0.00').setBorder(true, true, true, true, false, false);
     bRow++;
   }
 }
