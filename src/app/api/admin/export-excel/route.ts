@@ -83,20 +83,22 @@ export async function GET(req: Request) {
     // Col widths
     sheet.getColumn('A').width = 4.75;
     sheet.getColumn('B').width = 19.25;
-    sheet.getColumn('C').width = 13.88;
-    sheet.getColumn('D').width = 10.75;
-    sheet.getColumn('E').width = 10.5;
-    sheet.getColumn('F').width = 11.13;
-    sheet.getColumn('G').width = 9.38;
+    sheet.getColumn('C').width = 12; // ID
+    sheet.getColumn('D').width = 13.88; // Info
+    sheet.getColumn('E').width = 10.75;
+    sheet.getColumn('F').width = 10.5;
+    sheet.getColumn('G').width = 11.13;
+    sheet.getColumn('H').width = 9.38;
     sheet.getColumn('H').width = 4.75;
-    sheet.getColumn('I').width = 10.75;
-    sheet.getColumn('J').width = 11.25;
-    sheet.getColumn('K').width = 11.25;
+    sheet.getColumn('J').width = 10.75;
+    sheet.getColumn('L').width = 11.25;
+    sheet.getColumn('L').width = 11.25;
     sheet.getColumn('L').width = 7.13;
-    sheet.getColumn('M').width = 16.88;
+    sheet.getColumn('N').width = 16.88;
     sheet.getColumn('N').width = 6.63;
-    sheet.getColumn('O').width = 4.88;
-    sheet.getColumn('P').width = 21.75;
+    sheet.getColumn('P').width = 4.88;
+    sheet.getColumn('Q').width = 21.75;
+    sheet.getColumn('R').width = 12; // ID
 
     let cIndex = 17; // Q
     for (let i = 0; i < 31; i++) {
@@ -107,10 +109,10 @@ export async function GET(req: Request) {
     
     sheet.getColumn('CA').width = 8.88;
     sheet.getColumn('CB').width = 4.75;
-    sheet.getColumn('CC').width = 17.88;
-    sheet.getColumn('CD').width = 24.13;
-    sheet.getColumn('CE').width = 44;
-    sheet.getColumn('CF').width = 15.25;
+    sheet.getColumn('CE').width = 17.88;
+    sheet.getColumn('CF').width = 24.13;
+    sheet.getColumn('CG').width = 44;
+    sheet.getColumn('CH').width = 15.25;
 
     // Headers
     const r1 = sheet.getRow(1);
@@ -140,7 +142,8 @@ export async function GET(req: Request) {
 
     setHeader('A', 'SL', '', colorA_G);
     setHeader('B', 'Name', '', colorA_G);
-    setHeader('C', 'Info', '', colorA_G);
+    setHeader('C', 'ID', '', colorA_G);
+    setHeader('D', 'Info', '', colorA_G);
     
     const lastRow = students.length + 2; // e.g. 302 if 300 students
     const totalRowIdx = lastRow + 1; // e.g. 303
@@ -150,24 +153,25 @@ export async function GET(req: Request) {
     setHeader('F', { formula: `="Deposite 3 "&CHAR(10)&SUM(F${totalRowIdx}+0)` }, '', colorA_G);
     setHeader('G', { formula: `="Total Deposite "&CHAR(10)&SUM(G${totalRowIdx}+0)` }, '', colorA_G);
 
-    setHeader('I', 'Deposite', '', colorI_K);
-    setHeader('J', 'Cost', '', colorI_K);
-    setHeader('K', 'On-Hand', '', colorI_K);
+    setHeader('J', 'Deposite', '', colorI_K);
+    setHeader('K', 'Cost', '', colorI_K);
+    setHeader('L', 'On-Hand', '', colorI_K);
 
     // M header (NOT merged, M1 is blank, M2 has text)
-    const m1 = r1.getCell('M');
+    const m1 = r1.getCell('N');
     m1.border = borderStyle;
-    const m2 = r2.getCell('M');
+    const m2 = r2.getCell('N');
     m2.value = 'Current Meal Rate';
     m2.font = fontBold;
     m2.alignment = alignCenter;
     m2.border = borderStyle;
 
-    setHeader('O', 'SL', '', colorO_CF);
-    setHeader('P', 'Name', '', colorO_CF);
+    setHeader('P', 'SL', '', colorO_CF);
+    setHeader('Q', 'Name', '', colorO_CF);
+    setHeader('R', 'ID', '', colorO_CF);
 
     let currentDate = new Date(periodStart);
-    let dateCol = 17; // Q
+    let dateCol = 19; // S // Q
     for (let i = 0; i < 31; i++) {
       const c1 = r1.getCell(dateCol);
       c1.value = new Date(currentDate);
@@ -200,22 +204,22 @@ export async function GET(req: Request) {
       dateCol += 2;
     }
 
-    setHeader('CA', 'Total Meals', '', colorO_CF);
-    setHeader('CC', 'Date', '', colorO_CF);
-    setHeader('CD', 'Name', '', colorO_CF);
-    setHeader('CE', 'Bazer Details', '', colorO_CF);
-    setHeader('CF', 'Cost', '', colorO_CF);
+    setHeader('CC', 'Total Meals', '', colorO_CF);
+    setHeader('CE', 'Date', '', colorO_CF);
+    setHeader('CF', 'Name', '', colorO_CF);
+    setHeader('CG', 'Bazer Details', '', colorO_CF);
+    setHeader('CH', 'Cost', '', colorO_CF);
 
     // M formulas
-    sheet.getCell('M3').value = { formula: 'IFERROR(M11/M7, 0)' };
-    sheet.getCell('M3').font = { ...fontBold, size: 12, color: { argb: 'FFFF0000' } }; // Make it pop just in case
-    sheet.getCell('M3').alignment = alignCenter;
-    sheet.getCell('M6').value = 'Total Meal Count';
-    sheet.getCell(`M7`).value = { formula: `SUM(CA3:CA${lastRow})` };
-    sheet.getCell('M10').value = 'Total Cost';
-    sheet.getCell(`M11`).value = { formula: `SUM(CF3:CF${lastRow})` };
-    sheet.getCell('M13').value = 'On-Hand';
-    sheet.getCell(`M14`).value = { formula: `SUM(K3:K${lastRow})` };
+    sheet.getCell('N3').value = { formula: 'IFERROR(N11/N7, 0)' };
+    sheet.getCell('N3').font = { ...fontBold, size: 12, color: { argb: 'FFFF0000' } }; // Make it pop just in case
+    sheet.getCell('N3').alignment = alignCenter;
+    sheet.getCell('N6').value = 'Total Meal Count';
+    sheet.getCell(`N7`).value = { formula: `SUM(CC3:CC${lastRow})` };
+    sheet.getCell('N10').value = 'Total Cost';
+    sheet.getCell(`N11`).value = { formula: `SUM(CH3:CH${lastRow})` };
+    sheet.getCell('N13').value = 'On-Hand';
+    sheet.getCell(`N14`).value = { formula: `SUM(L3:L${lastRow})` };
 
     // Students Data
     let r = 3;
@@ -233,24 +237,25 @@ export async function GET(req: Request) {
 
       const balance = student.wallet?.balance || 0;
       const periodDeposit = periodDepositMap.get(student.id) || 0;
-      const formattedName = `${student.name} (${student.diningId})`;
-
+      
       applyCell('A', sl);
-      applyCell('B', formattedName);
-      applyCell('C', student.department || '');
-      applyCell('D', periodDeposit); // We just put the total deposit in Deposite 1 for simplicity in live view, or maybe we can't split it perfectly. Let's just put it in D.
-      applyCell('E', 0);
-      applyCell('F', 0);
-      applyCell('G', { formula: `SUM(D${r}:F${r})` });
+      applyCell('B', student.name);
+      applyCell('C', student.diningId);
+      applyCell('D', student.department || '');
+      applyCell('E', periodDeposit); // We just put the total deposit in Deposite 1 for simplicity in live view, or maybe we can't split it perfectly. Let's just put it in D.
+      applyCell('G', 0);
+      applyCell('G', 0);
+      applyCell('H', { formula: `SUM(E${r}:G${r})` });
       
-      applyCell('I', { formula: `SUM(G${r}+0)` });
-      applyCell('J', { formula: `CA${r}*$M$3` }); // Calculates live cost
-      applyCell('K', { formula: `I${r}-J${r}` }); // Calculates live balance
+      applyCell('J', { formula: `SUM(H${r}+0)` });
+      applyCell('K', { formula: `CC${r}*$N$3` }); // Calculates live cost
+      applyCell('L', { formula: `J${r}-K${r}` }); // Calculates live balance
       
-      applyCell('O', sl);
-      applyCell('P', formattedName);
+      applyCell('P', sl);
+      applyCell('Q', student.name);
+      applyCell('R', student.diningId);
 
-      let mc = 17;
+      let mc = 19;
       let totalMealsForStudent = 0;
       for (let i = 0; i < 31; i++) {
         let lVal: number | string = '';
