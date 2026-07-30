@@ -11,27 +11,55 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        otp: { label: "OTP", type: "text" }, // Add OTP field
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required")
+        if (!credentials?.email) {
+          throw new Error("Email is required")
         }
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
         })
 
-        if (!user || !user.passwordHash) {
+        if (!user) {
           throw new Error("Invalid email or password")
         }
 
-        const isValid = await compare(
-          credentials.password as string,
-          user.passwordHash
-        )
+        // --- ADMIN LOGIN LOGIC (2-Step Verification) ---
+        if (user.role === "ADMIN") {
+          if (!credentials.otp) {
+            throw new Error("Admin login requires an OTP.")
+          }
+          
+          if (user.otpCode !== credentials.otp) {
+            throw new Error("Invalid OTP.")
+          }
+          
+          if (!user.otpExpiresAt || new Date() > user.otpExpiresAt) {
+            throw new Error("OTP has expired. Please request a new one.")
+          }
 
-        if (!isValid) {
-          throw new Error("Invalid email or password")
+          // Clear the OTP upon successful login
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { otpCode: null, otpExpiresAt: null }
+          })
+        } 
+        // --- STUDENT/STAFF LOGIN LOGIC (Password) ---
+        else {
+          if (!credentials.password || !user.passwordHash) {
+            throw new Error("Invalid email or password")
+          }
+
+          const isValid = await compare(
+            credentials.password as string,
+            user.passwordHash
+          )
+
+          if (!isValid) {
+            throw new Error("Invalid email or password")
+          }
         }
 
         return {

@@ -71,6 +71,8 @@ model User {
   role          UserRole  @default(STUDENT)
   accounts      Account[]
   sessions      Session[]
+  otpCode       String?
+  otpExpiresAt  DateTime?
 
   student  Student?
   admin    Admin?

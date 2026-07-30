@@ -15,34 +15,73 @@ export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [otp, setOtp] = useState("")
+  const [step, setStep] = useState<"PASSWORD" | "OTP">("PASSWORD")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+
+  async function handleSuccessRedirect() {
+    const res = await fetch("/api/auth/session")
+    const session = await res.json()
+    const role = (session?.user as any)?.role;
+    
+    if (role === "ADMIN") {
+      router.push("/admin/dashboard")
+    } else if (role === "STAFF") {
+      router.push("/staff/dashboard")
+    } else {
+      router.push("/student/dashboard")
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError("")
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    })
+    if (step === "PASSWORD") {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
 
-    if (result?.error) {
-      setError("Invalid email or password")
-      setLoading(false)
-    } else {
-      const res = await fetch("/api/auth/session")
-      const session = await res.json()
-      const role = (session?.user as any)?.role;
-      
-      if (role === "ADMIN") {
-        router.push("/admin/dashboard")
-      } else if (role === "STAFF") {
-        router.push("/staff/dashboard")
+      if (result?.error === "Admin login requires an OTP.") {
+        // Trigger the OTP generation API
+        const otpReq = await fetch("/api/admin/auth/send-otp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+        const otpRes = await otpReq.json();
+        
+        if (otpRes.success) {
+          setStep("OTP")
+        } else {
+          setError(otpRes.error || "Failed to send verification code")
+        }
+        setLoading(false)
+      } else if (result?.error) {
+        setError(result.error) // Standard login error
+        setLoading(false)
       } else {
-        router.push("/student/dashboard")
+        // Success (Student or Staff)
+        await handleSuccessRedirect()
+      }
+    } else {
+      // Step: OTP
+      const result = await signIn("credentials", {
+        email,
+        otp,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        setError(result.error)
+        setLoading(false)
+      } else {
+        // Success (Admin)
+        await handleSuccessRedirect()
       }
     }
   }
@@ -54,8 +93,12 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xl">
             N
           </div>
-          <CardTitle className="text-2xl">Welcome back</CardTitle>
-          <CardDescription>Sign in to {APP_NAME}</CardDescription>
+          <CardTitle className="text-2xl">
+            {step === "PASSWORD" ? "Welcome back" : "Admin Verification"}
+          </CardTitle>
+          <CardDescription>
+            {step === "PASSWORD" ? `Sign in to ${APP_NAME}` : "Enter the 6-digit code sent to your email"}
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
@@ -64,38 +107,60 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@niter.edu.bd"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+            
+            {step === "PASSWORD" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="admin@niter.edu.bd"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            {step === "OTP" && (
+              <div className="space-y-2">
+                <Label htmlFor="otp">Verification Code</Label>
+                <Input
+                  id="otp"
+                  type="text"
+                  placeholder="123456"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  maxLength={6}
+                  required
+                />
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Verifying..." : step === "PASSWORD" ? "Sign In" : "Verify & Login"}
             </Button>
-            <p className="text-sm text-muted-foreground text-center">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-primary hover:underline">
-                Register
-              </Link>
-            </p>
+            {step === "PASSWORD" && (
+              <p className="text-sm text-muted-foreground text-center">
+                Don&apos;t have an account?{" "}
+                <Link href="/register" className="text-primary hover:underline">
+                  Register
+                </Link>
+              </p>
+            )}
           </CardFooter>
         </form>
       </Card>
