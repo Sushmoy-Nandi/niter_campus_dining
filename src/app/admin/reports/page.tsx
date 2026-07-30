@@ -243,6 +243,12 @@ export default function AdminReports() {
           <div className="flex gap-2">
             <Button onClick={() => {
               const secret = process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026";
+              window.open(`/api/admin/export-excel?secret=${secret}`, '_blank');
+            }} variant="default" className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+              <Download className="mr-2 h-4 w-4" /> Live Master Excel
+            </Button>
+            <Button onClick={() => {
+              const secret = process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026";
               window.open(`/api/admin/live-sheet?secret=${secret}`, '_blank');
             }} variant="default" className="bg-green-600 hover:bg-green-700 text-white font-bold">
               <Download className="mr-2 h-4 w-4" /> Live Master CSV
