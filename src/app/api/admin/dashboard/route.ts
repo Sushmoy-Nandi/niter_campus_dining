@@ -148,8 +148,8 @@ export async function GET(req: NextRequest) {
     const totalRefunds = monthRefunds._sum.amount || 0
     const totalBazaarCost = bazaarCost._sum.amount || 0
 
-    // Sum of all active student wallet balances is the true outstanding liability/balance
-    const outstandingBalance = students.reduce((acc, s) => acc + (s.wallet?.balance || 0), 0)
+    // Sum of all deposits minus refunds and bazaar expenses for the active period
+    const outstandingBalance = totalDeposits - totalRefunds - totalBazaarCost
 
     const feedbackStats = {
       total: allFeedback.length,
