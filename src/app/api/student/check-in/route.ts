@@ -6,7 +6,7 @@ import { isStudentAutoOff } from "@/lib/meal-utils"
 
 // A custom webhook caller just for appending logs to the Google Sheet
 async function triggerGoogleSheetAppend(logData: any) {
-  const syncUrl = process.env.GOOGLE_SCRIPT_AUTO;
+  const syncUrl = process.env.GOOGLE_SCRIPT_SCAN_LOG_URL;
   if (!syncUrl) return;
 
   try {
