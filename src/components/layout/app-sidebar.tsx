@@ -36,6 +36,7 @@ import { APP_NAME } from "@/lib/constants"
 
 const studentNavItems = [
   { title: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
+  { title: "Scanner", href: "/student/scanner", icon: ScanLine },
   { title: "Meals", href: "/student/meals", icon: UtensilsCrossed },
   { title: "Calendar", href: "/student/calendar", icon: Calendar },
   { title: "Polls", href: "/student/polls", icon: MessageSquare },

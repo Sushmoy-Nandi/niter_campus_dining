@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Wallet, UtensilsCrossed, CalendarDays, TrendingDown, Clock, MessageSquare, Star, Download } from "lucide-react"
+import { Wallet, UtensilsCrossed, CalendarDays, TrendingDown, Clock, MessageSquare, Star, Download, ScanLine } from "lucide-react"
 import { LOW_BALANCE_THRESHOLD } from "@/lib/constants"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,7 @@ interface DashboardData {
 
 export default function StudentDashboard() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [mealRate, setMealRate] = useState(0)
@@ -210,9 +212,14 @@ export default function StudentDashboard() {
             />
           </div>
           <p className="text-xs text-muted-foreground mt-3 text-center">Scan this at the dining hall to check-in for your meal.</p>
-          <Button variant="outline" size="sm" className="mt-4" onClick={downloadQRAsPDF}>
-            <Download className="h-4 w-4 mr-2" /> Download QR as PDF
-          </Button>
+          <div className="flex gap-3 mt-4 flex-wrap justify-center">
+            <Button variant="default" size="sm" onClick={() => router.push('/student/scanner')}>
+              <ScanLine className="h-4 w-4 mr-2" /> Open In-App Scanner
+            </Button>
+            <Button variant="outline" size="sm" onClick={downloadQRAsPDF}>
+              <Download className="h-4 w-4 mr-2" /> Download QR as PDF
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
