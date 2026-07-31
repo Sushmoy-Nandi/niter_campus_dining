@@ -111,6 +111,12 @@ function ScanHandler() {
           {result?.status}
         </h1>
 
+        {result?.meal && (
+          <div className="bg-white text-green-700 font-extrabold text-2xl md:text-3xl px-6 py-2 rounded-full mt-3 uppercase tracking-widest shadow-lg drop-shadow-md border-4 border-green-400">
+            {result.meal}
+          </div>
+        )}
+
         {result?.reason && (
           <p className="text-xl font-bold opacity-90 uppercase text-center mt-2">
             {result.reason}

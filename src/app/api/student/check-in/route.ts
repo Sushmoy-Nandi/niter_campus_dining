@@ -209,6 +209,7 @@ export async function POST(req: Request) {
       success: true,
       status: "AUTHORIZED",
       reason: "",
+      meal: currentMeal,
       student: {
         name: student.name,
         photo: session.user.image,
