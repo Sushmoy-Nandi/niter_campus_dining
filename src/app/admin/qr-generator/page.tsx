@@ -109,10 +109,17 @@ export default function QRGeneratorPage() {
       doc.text(mealType, pageWidth / 2, 175, { align: "center" })
       
       // Instructions
-      doc.setTextColor(100, 100, 100)
-      doc.setFontSize(12)
+      doc.setTextColor(80, 80, 80)
+      doc.setFontSize(14)
       doc.setFont("helvetica", "normal")
-      doc.text("Scan this QR code with your student app to check in.", pageWidth / 2, 195, { align: "center" })
+      const instruction1 = `Scan this QR code to securely check in for ${mealType.charAt(0) + mealType.slice(1).toLowerCase()}.`
+      const instruction2 = `Please ensure you are logged into your student account before scanning.`
+      
+      doc.text(instruction1, pageWidth / 2, 195, { align: "center" })
+      
+      doc.setFontSize(12)
+      doc.setTextColor(150, 150, 150)
+      doc.text(instruction2, pageWidth / 2, 203, { align: "center" })
 
       // Save PDF
       doc.save(`Meal-QR-${format(date, "yyyy-MM-dd")}-${mealType}.pdf`)
