@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     // 3. Find Student
     const student = await prisma.student.findUnique({
       where: { userId: session.user.id },
-      include: { wallet: true }
+      include: { wallet: true, user: { select: { image: true } } }
     })
     
     if (!student) {
@@ -204,7 +204,7 @@ export async function POST(req: Request) {
       meal: currentMeal,
       student: {
         name: student.name,
-        photo: session.user.image,
+        photo: student.user?.image,
         diningId: student.diningId,
         department: student.department
       }
