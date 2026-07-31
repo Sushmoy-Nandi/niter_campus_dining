@@ -56,6 +56,23 @@ export async function GET(req: NextRequest) {
     const balance = student.wallet?.balance || 0
     const { autoOff, reason: autoOffReason } = isStudentAutoOff(balance, activePeriod, today, periodDeposit);
 
+    // Calculate final active status for today's meals (respecting auto-suspension and admin overrides)
+    const todayOverridden = todaySchedule?.adminOverride === true
+    const todaySuspended = autoOff && !todayOverridden
+    const finalTodayMeals = {
+      lunch: todaySuspended ? false : (todaySchedule?.lunch ?? true),
+      dinner: todaySuspended ? false : (todaySchedule?.dinner ?? true),
+    }
+
+    // Calculate final active status for tomorrow's meals (respecting auto-suspension and admin overrides)
+    const { autoOff: tomorrowAutoOff } = isStudentAutoOff(balance, activePeriod, tomorrow, periodDeposit)
+    const tomorrowOverridden = tomorrowSchedule?.adminOverride === true
+    const tomorrowSuspended = tomorrowAutoOff && !tomorrowOverridden
+    const finalTomorrowMeals = {
+      lunch: tomorrowSuspended ? false : (tomorrowSchedule?.lunch ?? true),
+      dinner: tomorrowSuspended ? false : (tomorrowSchedule?.dinner ?? true),
+    }
+
     const monthlySchedules = await prisma.mealSchedule.findMany({
       where: {
         studentId: student.id,
@@ -110,8 +127,8 @@ export async function GET(req: NextRequest) {
         session: student.session,
       },
       wallet: student.wallet,
-      todayMeals: todaySchedule,
-      tomorrowMeals: tomorrowSchedule,
+      todayMeals: finalTodayMeals,
+      tomorrowMeals: finalTomorrowMeals,
       monthlyMealCount,
       monthlySpending,
       recentTransactions,

@@ -289,8 +289,8 @@ export default function StudentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
-              <MealBadge label="Lunch" active={!data.autoOff && (data.todayMeals?.lunch ?? true)} />
-              <MealBadge label="Dinner" active={!data.autoOff && (data.todayMeals?.dinner ?? true)} />
+              <MealBadge label="Lunch" active={data.todayMeals?.lunch} />
+              <MealBadge label="Dinner" active={data.todayMeals?.dinner} />
             </div>
           </CardContent>
         </Card>
@@ -301,8 +301,8 @@ export default function StudentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
-              <MealBadge label="Lunch" active={!data.autoOff && (data.tomorrowMeals?.lunch ?? true)} />
-              <MealBadge label="Dinner" active={!data.autoOff && (data.tomorrowMeals?.dinner ?? true)} />
+              <MealBadge label="Lunch" active={data.tomorrowMeals?.lunch} />
+              <MealBadge label="Dinner" active={data.tomorrowMeals?.dinner} />
             </div>
           </CardContent>
         </Card>
