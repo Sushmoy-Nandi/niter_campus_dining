@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { depositSchema } from "@/lib/validations"
 import { sendEmail } from "@/lib/email"
-import { isStudentAutoOff, getStudentPeriodDeposit } from "@/lib/meal-utils"
+import { isStudentAutoOff, getStudentPeriodDeposit, getBDTTodayStartUTC } from "@/lib/meal-utils"
 import { triggerLiveSheetSync } from "@/lib/google-sync"
 import { parsePagination } from "@/lib/utils"
 
@@ -100,11 +100,10 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // Auto-turn on meals if student was suspended but is now clear
+      // Auto-turn on meals starting tomorrow if student was suspended but is now clear
       if (wasAutoOff && !stillAutoOff) {
-        const tomorrow = new Date()
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        tomorrow.setHours(0, 0, 0, 0)
+        const tomorrow = getBDTTodayStartUTC()
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
         
         await tx.mealSchedule.updateMany({
           where: {

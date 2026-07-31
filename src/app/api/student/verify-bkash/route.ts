@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { triggerLiveSheetSync } from "@/lib/google-sync";
+import { isStudentAutoOff, getStudentPeriodDeposit, getBDTTodayStartUTC } from "@/lib/meal-utils";
 
 export async function POST(req: NextRequest) {
   try {
@@ -46,6 +47,20 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true } })
+    let periodDeposit = 0;
+    if (activePeriod) {
+      periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
+    }
+
+    const oldBalance = student.wallet?.balance || 0;
+    const newBalance = oldBalance + bkashRecord.amount;
+
+    // Check if student was auto-off before deposit
+    const { autoOff: wasAutoOff } = isStudentAutoOff(oldBalance, activePeriod, new Date(), periodDeposit);
+    // Check if student will still be auto-off after deposit
+    const { autoOff: stillAutoOff } = isStudentAutoOff(newBalance, activePeriod, new Date(), periodDeposit + bkashRecord.amount);
 
     // Process the deposit!
     await prisma.$transaction(async (tx) => {
@@ -100,6 +115,23 @@ export async function POST(req: NextRequest) {
           details: `Verified Tk ${bkashRecord.amount} with TrxID ${trxId}`
         }
       });
+
+      // 6. Auto-turn on meals starting tomorrow if student was suspended but is now clear
+      if (wasAutoOff && !stillAutoOff) {
+        const tomorrow = getBDTTodayStartUTC();
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        
+        await tx.mealSchedule.updateMany({
+          where: {
+            studentId: student.id,
+            date: { gte: tomorrow }
+          },
+          data: {
+            lunch: true,
+            dinner: true
+          }
+        });
+      }
     });
 
     // Trigger google sheets live sync in background
