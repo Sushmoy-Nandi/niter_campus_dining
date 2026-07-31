@@ -49,10 +49,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid QR code format" }, { status: 400 })
     }
 
-    const scanDate = new Date(date)
-    scanDate.setUTCHours(0,0,0,0)
+    // 2. CHECK TIME (Strict boundaries just like Admin Scanner)
+    const bdtString = new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" });
+    const bdtDate = new Date(bdtString);
+    const hour = bdtDate.getHours();
+    const minute = bdtDate.getMinutes();
+    
+    const year = bdtDate.getFullYear();
+    const month = String(bdtDate.getMonth() + 1).padStart(2, '0');
+    const day = String(bdtDate.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+    
+    // Check if token date matches today
+    if (date !== todayStr) {
+      return NextResponse.json({ error: `This QR code is for ${date}, not today.` }, { status: 400 })
+    }
+    
+    let currentMeal: "LUNCH" | "DINNER" | null = null;
+    
+    if (hour >= 10 && hour < 17) {
+      currentMeal = "LUNCH";
+    } else if (hour >= 19 && (hour < 23 || (hour === 23 && minute <= 30))) {
+      currentMeal = "DINNER";
+    }
 
-    // 2. Find Student
+    if (!currentMeal) {
+      return NextResponse.json({ error: "No active meal service at this time. Lunch is 10AM-5PM, Dinner is 7PM-11:30PM." }, { status: 400 })
+    }
+
+    if (currentMeal !== mealType) {
+      return NextResponse.json({ error: `You scanned a ${mealType} QR code during the ${currentMeal} period!` }, { status: 400 })
+    }
+
+    // 3. Find Student
     const student = await prisma.student.findUnique({
       where: { userId: session.user.id },
       include: { wallet: true }
@@ -62,7 +91,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Student profile not found" }, { status: 404 })
     }
 
-    // 3. Find Active Period
+    if (!student.isActive) {
+      return NextResponse.json({ error: "Student account is inactive" }, { status: 403 })
+    }
+
+    // 4. Find Active Period
     const activePeriod = await prisma.diningPeriod.findFirst({
       where: { isActive: true }
     })
@@ -71,93 +104,111 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No active dining period" }, { status: 400 })
     }
 
-    // 4. Calculate if student is Auto-Off
-    // We need their total deposits
-    const deposits = await prisma.transaction.findMany({
-      where: { studentId: student.id, type: { in: ["DEPOSIT", "REFUND"] } }
+    // 5. Calculate if student is Auto-Off
+    let periodDeposit = 0;
+    const deposits = await prisma.transaction.aggregate({
+      _sum: { amount: true },
+      where: { 
+        studentId: student.id, 
+        type: "DEPOSIT",
+        createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
+      }
+    });
+    periodDeposit = deposits._sum.amount || 0;
+
+    const balance = student.wallet?.balance || 0;
+    const { autoOff, reason: offReason } = isStudentAutoOff(balance, activePeriod, bdtDate, periodDeposit);
+
+    if (autoOff) {
+      await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_AUTO_OFF`, details: offReason }})
+      await triggerGoogleSheetAppend({
+        time: new Date().toISOString(),
+        name: student.name,
+        diningId: student.diningId,
+        department: student.department,
+        meal: currentMeal,
+        status: "DENIED",
+        reason: offReason
+      });
+      return NextResponse.json({ error: `Meal auto-disabled: ${offReason}` }, { status: 403 })
+    }
+    
+    // 6. Check custom schedule
+    const schedules = await prisma.mealSchedule.findMany({
+      where: { studentId: student.id }
     })
     
-    const sumTxs = deposits.reduce((sum, tx) => {
-      return sum + (tx.type === "REFUND" ? -Math.abs(tx.amount) : tx.amount)
-    }, 0)
+    const schedule = schedules.find(s => {
+       const dStr = s.date.toISOString().split("T")[0]
+       return dStr === todayStr
+    })
 
-    const { autoOff } = isStudentAutoOff(student.wallet?.balance || 0, activePeriod, new Date(), sumTxs)
-    
-    // Check custom schedule if not auto-off
-    let isAuthorized = !autoOff
-    let denyReason = autoOff ? "Auto-Off (Low Balance/Deposit)" : null
-
-    if (isAuthorized) {
-      const schedule = await prisma.mealSchedule.findFirst({
-        where: {
-          studentId: student.id,
-          date: {
-            gte: new Date(scanDate.setUTCHours(0,0,0,0)),
-            lte: new Date(scanDate.setUTCHours(23,59,59,999))
-          }
-        }
-      })
-      if (schedule) {
-        if (mealType === "LUNCH" && !schedule.lunch) {
-          isAuthorized = false;
-          denyReason = "Lunch is OFF today";
-        }
-        if (mealType === "DINNER" && !schedule.dinner) {
-          isAuthorized = false;
-          denyReason = "Dinner is OFF today";
-        }
+    if (schedule) {
+      if (currentMeal === "LUNCH" && !schedule.lunch) {
+        await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_LUNCH_${todayStr}`, details: `Lunch is turned OFF` }})
+        await triggerGoogleSheetAppend({ time: new Date().toISOString(), name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Lunch is OFF today" });
+        return NextResponse.json({ error: "Lunch is turned OFF for today" }, { status: 403 })
       }
-    }
-
-    // 5. Check if already scanned
-    if (isAuthorized) {
-      const existingScan = await prisma.mealCheckIn.findFirst({
-        where: {
-          studentId: student.id,
-          date: scanDate,
-          mealType: mealType,
-          status: "AUTHORIZED"
-        }
-      })
       
-      if (existingScan) {
-        isAuthorized = false;
-        denyReason = "Already Scanned";
+      if (currentMeal === "DINNER" && !schedule.dinner) {
+        await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_DINNER_${todayStr}`, details: `Dinner is turned OFF` }})
+        await triggerGoogleSheetAppend({ time: new Date().toISOString(), name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Dinner is OFF today" });
+        return NextResponse.json({ error: "Dinner is turned OFF for today" }, { status: 403 })
       }
     }
 
-    // 6. Record the scan log
-    const status = isAuthorized ? "AUTHORIZED" : "DENIED"
-    
-    const checkIn = await prisma.mealCheckIn.create({
+    // 7. Prevent double scanning using AuditLog
+    const actionKey = `MEAL_SCANNED_${currentMeal}_${todayStr}`
+    const existingScan = await prisma.auditLog.findFirst({
+      where: {
+        studentId: student.id,
+        action: actionKey
+      }
+    })
+
+    if (existingScan) {
+      const scanTime = new Date(existingScan.createdAt).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Dhaka",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      });
+      
+      const detailsMsg = `Double scan attempt (previously checked in for ${currentMeal.toLowerCase()} at ${scanTime})`;
+      await prisma.auditLog.create({ 
+        data: { 
+          studentId: student.id, 
+          action: `FAILED_SCAN_${currentMeal}_${todayStr}`, 
+          details: detailsMsg 
+        }
+      })
+      await triggerGoogleSheetAppend({ time: new Date().toISOString(), name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Already Scanned" });
+      return NextResponse.json({ error: `Student already checked in for ${currentMeal.toLowerCase()} at ${scanTime}!` }, { status: 409 })
+    }
+
+    // 8. Record the scan log
+    await prisma.auditLog.create({
       data: {
         studentId: student.id,
-        date: scanDate,
-        mealType,
-        status: status,
-        reason: denyReason
+        action: actionKey,
+        details: `Checked in for ${currentMeal.toLowerCase()}`
       }
     })
 
-    // 7. Push to Google Sheets Live Log
-    const logData = {
-      time: checkIn.createdAt.toISOString(),
+    await triggerGoogleSheetAppend({
+      time: new Date().toISOString(),
       name: student.name,
       diningId: student.diningId,
       department: student.department,
-      meal: mealType,
-      status: status,
-      reason: denyReason || ""
-    }
-
-    // Fire the webhook without blocking the main response too long, but await it 
-    // to prevent Vercel freezing.
-    await triggerGoogleSheetAppend(logData)
+      meal: currentMeal,
+      status: "AUTHORIZED",
+      reason: ""
+    });
 
     return NextResponse.json({
       success: true,
-      status: status,
-      reason: denyReason,
+      status: "AUTHORIZED",
+      reason: "",
       student: {
         name: student.name,
         photo: session.user.image,

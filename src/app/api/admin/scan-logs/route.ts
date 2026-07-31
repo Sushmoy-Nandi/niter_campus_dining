@@ -41,30 +41,11 @@ export async function GET(req: NextRequest) {
       },
       include: {
         student: { select: { name: true, diningId: true, studentId: true, department: true } }
-      }
-    })
-
-    const checkIns = await prisma.mealCheckIn.findMany({
-      where: {
-        createdAt: {
-          gte: startOfDay,
-          lte: endOfDay
-        }
       },
-      include: {
-        student: { select: { name: true, diningId: true, studentId: true, department: true } }
-      }
+      orderBy: { createdAt: "desc" }
     })
 
-    const mappedCheckIns = checkIns.map(c => ({
-      id: c.id,
-      action: c.status === "AUTHORIZED" ? `MEAL_SCANNED_${c.mealType}` : `FAILED_SCAN_QR_${c.mealType}`,
-      details: c.reason || "QR Code Scan",
-      createdAt: c.createdAt,
-      student: c.student
-    }))
-
-    const logs = [...auditLogs, ...mappedCheckIns].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    const logs = auditLogs;
 
     // Group logs for easy stats
     let totalScanned = 0
