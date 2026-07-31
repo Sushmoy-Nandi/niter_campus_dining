@@ -74,51 +74,51 @@ function ScanHandler() {
 
   return (
     <div 
-      className={`flex flex-col items-center justify-center min-h-[80vh] space-y-8 text-white rounded-3xl p-8 text-center mx-4 mt-8 shadow-2xl transition-colors duration-500 ${
+      className={`flex flex-col items-center justify-center min-h-[90dvh] w-full max-w-md mx-auto p-4 space-y-4 text-white transition-colors duration-500 rounded-3xl mt-4 shadow-2xl ${
         isAuthorized ? "bg-green-600" : "bg-red-600"
       }`}
     >
       {isAuthorized ? (
-        <CheckCircle className="w-40 h-40 text-white animate-bounce" />
+        <CheckCircle className="w-24 h-24 text-white animate-bounce" />
       ) : (
-        <XCircle className="w-40 h-40 text-white" />
+        <XCircle className="w-24 h-24 text-white" />
       )}
 
-      <h1 className="text-6xl md:text-8xl font-black uppercase tracking-widest drop-shadow-md">
+      <h1 className="text-4xl md:text-5xl font-black uppercase tracking-wider drop-shadow-md text-center break-words w-full px-2">
         {result?.status}
       </h1>
 
       {result?.reason && (
-        <p className="text-3xl font-bold opacity-90 uppercase">
+        <p className="text-xl font-bold opacity-90 uppercase text-center">
           {result.reason}
         </p>
       )}
 
-      {/* Massive Date Display */}
-      <div className="mt-4 text-5xl md:text-7xl font-black text-white/90 drop-shadow-lg tracking-wide">
-        {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+      {/* Date Display */}
+      <div className="text-3xl md:text-4xl font-black text-white/90 drop-shadow-lg tracking-wide text-center">
+        {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
       </div>
 
-      <div className="mt-6 bg-white/20 backdrop-blur-md p-8 rounded-2xl w-full max-w-md shadow-inner">
+      <div className="bg-white/20 backdrop-blur-md p-6 rounded-2xl w-full shadow-inner flex flex-col items-center">
         {result?.student?.photo ? (
           <img 
             src={result.student.photo} 
             alt="Profile" 
-            className="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-white shadow-lg object-cover" 
+            className="w-20 h-20 rounded-full mb-3 border-4 border-white shadow-lg object-cover" 
           />
         ) : (
-          <div className="w-32 h-32 rounded-full mx-auto mb-4 border-4 border-white shadow-lg bg-white/40 flex items-center justify-center text-5xl font-bold">
+          <div className="w-20 h-20 rounded-full mb-3 border-4 border-white shadow-lg bg-white/40 flex items-center justify-center text-4xl font-bold">
             {result?.student?.name?.charAt(0)}
           </div>
         )}
-        <h2 className="text-4xl font-bold drop-shadow-sm">{result?.student?.name}</h2>
-        <p className="text-2xl mt-2 opacity-90 font-semibold drop-shadow-sm">ID: {result?.student?.diningId}</p>
-        <p className="text-xl mt-1 opacity-80">{result?.student?.department}</p>
+        <h2 className="text-2xl font-bold drop-shadow-sm text-center leading-tight">{result?.student?.name}</h2>
+        <p className="text-lg mt-1 opacity-90 font-semibold drop-shadow-sm">ID: {result?.student?.diningId}</p>
+        <p className="text-sm opacity-80 text-center">{result?.student?.department}</p>
       </div>
 
       <button 
         onClick={() => router.push('/student/dashboard')}
-        className={`mt-12 px-10 py-4 font-extrabold rounded-full transition shadow-xl text-2xl hover:scale-105 active:scale-95 ${
+        className={`w-full max-w-[200px] py-3 mt-2 font-extrabold rounded-full transition shadow-xl text-xl hover:scale-105 active:scale-95 ${
           isAuthorized ? "bg-green-800 hover:bg-green-900 text-white" : "bg-white text-red-700 hover:bg-red-50"
         }`}
       >
