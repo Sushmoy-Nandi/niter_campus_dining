@@ -114,6 +114,7 @@ model Student {
   mealFeedbacks     MealFeedback[]
   pollVotes         PollVote[]
   claimedBkash      BkashLedger[]  @relation("ClaimedBkash")
+  mealCheckIns      MealCheckIn[]
 }
 
 model Wallet {
@@ -318,4 +319,19 @@ model RefundRequest {
   updatedAt   DateTime      @updatedAt
 
   student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model MealCheckIn {
+  id        String   @id @default(cuid())
+  studentId String
+  date      DateTime @db.Date // The logical date of the meal
+  mealType  String   // "LUNCH" or "DINNER"
+  status    String   // "AUTHORIZED", "DENIED"
+  reason    String?  // E.g., "Insufficient Balance", "Already Scanned", "Meal Off"
+  createdAt DateTime @default(now()) // Exact timestamp of scan
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  // Prevent scanning twice for the same meal
+  @@index([date, mealType])
 }

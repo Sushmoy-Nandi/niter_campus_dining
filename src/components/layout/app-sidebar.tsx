@@ -46,6 +46,7 @@ const studentNavItems = [
 
 const adminNavItems = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "QR Generator", href: "/admin/qr-generator", icon: ScanLine },
   { title: "Scanner", href: "/admin/scanner", icon: ScanLine },
   { title: "Scan Monitor", href: "/admin/scan-logs", icon: Activity },
   { title: "Students", href: "/admin/students", icon: Users },

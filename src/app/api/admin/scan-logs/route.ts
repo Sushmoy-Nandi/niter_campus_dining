@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     const startOfDay = new Date(startDateStr + "T00:00:00.000+06:00")
     const endOfDay = new Date(endDateStr + "T23:59:59.999+06:00")
 
-    const logs = await prisma.auditLog.findMany({
+    const auditLogs = await prisma.auditLog.findMany({
       where: {
         OR: [
           { action: { startsWith: "MEAL_SCANNED_" } },
@@ -41,9 +41,30 @@ export async function GET(req: NextRequest) {
       },
       include: {
         student: { select: { name: true, diningId: true, studentId: true, department: true } }
-      },
-      orderBy: { createdAt: "desc" }
+      }
     })
+
+    const checkIns = await prisma.mealCheckIn.findMany({
+      where: {
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay
+        }
+      },
+      include: {
+        student: { select: { name: true, diningId: true, studentId: true, department: true } }
+      }
+    })
+
+    const mappedCheckIns = checkIns.map(c => ({
+      id: c.id,
+      action: c.status === "AUTHORIZED" ? `MEAL_SCANNED_${c.mealType}` : `FAILED_SCAN_QR_${c.mealType}`,
+      details: c.reason || "QR Code Scan",
+      createdAt: c.createdAt,
+      student: c.student
+    }))
+
+    const logs = [...auditLogs, ...mappedCheckIns].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
 
     // Group logs for easy stats
     let totalScanned = 0

@@ -1,0 +1,171 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { format } from "date-fns"
+import QRCode from "qrcode"
+import { CalendarIcon, Download } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { cn } from "@/lib/utils"
+
+export default function QRGeneratorPage() {
+  const [date, setDate] = useState<Date>(new Date())
+  const [mealType, setMealType] = useState<"LUNCH" | "DINNER">("LUNCH")
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const generateQRCode = async () => {
+    setLoading(true)
+    setError("")
+    setQrCodeUrl("")
+
+    try {
+      const dateStr = format(date, "yyyy-MM-dd")
+      const res = await fetch("/api/admin/generate-qr-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: dateStr, mealType })
+      })
+
+      if (!res.ok) {
+        throw new Error("Failed to generate token")
+      }
+
+      const { token } = await res.json()
+      
+      // The URL the student will visit
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      const scanUrl = `${origin}/student/scan?token=${token}`
+
+      // Generate the QR Code image as a data URL
+      const qrDataUrl = await QRCode.toDataURL(scanUrl, {
+        width: 600,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      })
+
+      setQrCodeUrl(qrDataUrl)
+    } catch (err: any) {
+      setError(err.message || "Failed to generate QR Code")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Auto-generate on load and when selections change
+  useEffect(() => {
+    generateQRCode()
+  }, [date, mealType])
+
+  const downloadQR = () => {
+    if (!qrCodeUrl) return
+    const a = document.createElement('a')
+    a.href = qrCodeUrl
+    a.download = `Meal-QR-${format(date, "yyyy-MM-dd")}-${mealType}.png`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Daily QR Code Generator</h1>
+        <p className="text-muted-foreground mt-2">
+          Generate the secure QR code for students to scan during meals. Display this on a tablet or print it.
+        </p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-6 p-6 border rounded-xl bg-card shadow-sm h-fit">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Date</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(d) => d && setDate(d)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Meal Type</label>
+              <Select value={mealType} onValueChange={(val: any) => setMealType(val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Meal" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LUNCH">Lunch</SelectItem>
+                  <SelectItem value="DINNER">Dinner</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {error && (
+              <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
+                {error}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col items-center justify-center p-8 border rounded-xl bg-card shadow-sm min-h-[400px]">
+          {loading ? (
+            <div className="animate-pulse flex flex-col items-center">
+              <div className="w-64 h-64 bg-slate-200 rounded-lg"></div>
+              <p className="mt-4 text-muted-foreground">Generating secure QR code...</p>
+            </div>
+          ) : qrCodeUrl ? (
+            <div className="flex flex-col items-center space-y-6">
+              <div className="p-4 bg-white rounded-xl shadow-md">
+                <img src={qrCodeUrl} alt="Meal QR Code" className="w-72 h-72 object-contain" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-xl">{format(date, "PPPP")}</h3>
+                <p className="text-muted-foreground text-lg uppercase tracking-widest">{mealType}</p>
+              </div>
+              <Button onClick={downloadQR} className="w-full" size="lg">
+                <Download className="mr-2 h-5 w-5" />
+                Download QR Code
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}
