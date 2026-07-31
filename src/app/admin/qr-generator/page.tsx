@@ -113,7 +113,7 @@ export default function QRGeneratorPage() {
       doc.setFontSize(14)
       doc.setFont("helvetica", "normal")
       const instruction1 = `Scan this QR code to securely check in for ${mealType.charAt(0) + mealType.slice(1).toLowerCase()}.`
-      const instruction2 = `Please ensure you are logged into your student account before scanning.`
+      const instruction2 = `Please ensure you are logged into your campus dining account before scanning.`
       
       doc.text(instruction1, pageWidth / 2, 195, { align: "center" })
       
