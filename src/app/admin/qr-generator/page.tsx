@@ -76,12 +76,47 @@ export default function QRGeneratorPage() {
 
   const downloadQR = () => {
     if (!qrCodeUrl) return
-    const a = document.createElement('a')
-    a.href = qrCodeUrl
-    a.download = `Meal-QR-${format(date, "yyyy-MM-dd")}-${mealType}.png`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    
+    import("jspdf").then(({ jsPDF }) => {
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      })
+
+      const pageWidth = doc.internal.pageSize.getWidth()
+      
+      // Title
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(24)
+      doc.text("NITER Campus Dining", pageWidth / 2, 30, { align: "center" })
+      
+      // Add the QR Code Image
+      const qrSize = 100
+      const qrX = (pageWidth - qrSize) / 2
+      doc.addImage(qrCodeUrl, "PNG", qrX, 45, qrSize, qrSize)
+
+      // Add Date Text (e.g. "Friday, July 31st, 2026")
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(20)
+      const dateText = format(date, "EEEE, MMMM do, yyyy")
+      doc.text(dateText, pageWidth / 2, 160, { align: "center" })
+
+      // Add Meal Text (e.g. "LUNCH")
+      doc.setFont("helvetica", "bold")
+      doc.setFontSize(28)
+      doc.setTextColor(34, 197, 94) // Green-ish color
+      doc.text(mealType, pageWidth / 2, 175, { align: "center" })
+      
+      // Instructions
+      doc.setTextColor(100, 100, 100)
+      doc.setFontSize(12)
+      doc.setFont("helvetica", "normal")
+      doc.text("Scan this QR code with your student app to check in.", pageWidth / 2, 195, { align: "center" })
+
+      // Save PDF
+      doc.save(`Meal-QR-${format(date, "yyyy-MM-dd")}-${mealType}.pdf`)
+    })
   }
 
   return (
