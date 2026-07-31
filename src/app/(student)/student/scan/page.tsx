@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 
-export default function StudentScanPage() {
+function ScanHandler() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get("token")
@@ -120,5 +120,18 @@ export default function StudentScanPage() {
         Done
       </button>
     </div>
+  )
+}
+
+export default function StudentScanPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center min-h-[80vh] space-y-6">
+        <Loader2 className="w-24 h-24 animate-spin text-primary" />
+        <h2 className="text-3xl font-bold animate-pulse text-muted-foreground">Loading Scanner...</h2>
+      </div>
+    }>
+      <ScanHandler />
+    </Suspense>
   )
 }
