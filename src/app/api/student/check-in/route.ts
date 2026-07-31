@@ -122,7 +122,7 @@ export async function POST(req: Request) {
     if (autoOff) {
       await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_AUTO_OFF`, details: offReason }})
       await triggerGoogleSheetAppend({
-        time: new Date().toISOString(),
+        time: bdtString,
         name: student.name,
         diningId: student.diningId,
         department: student.department,
@@ -146,13 +146,13 @@ export async function POST(req: Request) {
     if (schedule) {
       if (currentMeal === "LUNCH" && !schedule.lunch) {
         await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_LUNCH_${todayStr}`, details: `Lunch is turned OFF` }})
-        await triggerGoogleSheetAppend({ time: new Date().toISOString(), name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Lunch is OFF today" });
+        await triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Lunch is OFF today" });
         return NextResponse.json({ error: "Lunch is turned OFF for today" }, { status: 403 })
       }
       
       if (currentMeal === "DINNER" && !schedule.dinner) {
         await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_DINNER_${todayStr}`, details: `Dinner is turned OFF` }})
-        await triggerGoogleSheetAppend({ time: new Date().toISOString(), name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Dinner is OFF today" });
+        await triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Dinner is OFF today" });
         return NextResponse.json({ error: "Dinner is turned OFF for today" }, { status: 403 })
       }
     }
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
           details: detailsMsg 
         }
       })
-      await triggerGoogleSheetAppend({ time: new Date().toISOString(), name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Already Scanned" });
+      await triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Already Scanned" });
       return NextResponse.json({ error: `Student already checked in for ${currentMeal.toLowerCase()} at ${scanTime}!` }, { status: 409 })
     }
 
@@ -196,7 +196,7 @@ export async function POST(req: Request) {
     })
 
     await triggerGoogleSheetAppend({
-      time: new Date().toISOString(),
+      time: bdtString,
       name: student.name,
       diningId: student.diningId,
       department: student.department,
