@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getBkashWebhookSecret } from "@/lib/secrets";
 
 export async function POST(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const secret = searchParams.get("secret");
     
-    // Check if the secret matches the environment variable (or a strong hardcoded fallback if env is missing)
-    const expectedSecret = process.env.BKASH_WEBHOOK_SECRET || "niter_dining_secure_123!";
+    // Fail-closed secret: unset env var throws (caught below → 500) rather than
+    // falling back to a public hardcoded value.
+    const expectedSecret = getBkashWebhookSecret();
     
     if (secret !== expectedSecret) {
       console.warn("Unauthorized webhook attempt blocked.");
@@ -41,6 +43,15 @@ export async function POST(req: NextRequest) {
       const amountStr = amountMatch[1].replace(/,/g, '');
       const amount = parseFloat(amountStr);
       const senderNumber = senderMatch ? senderMatch[1] : null;
+
+      // Guard against a malformed amount ("Tk .00", corrupted SMS). Without this
+      // a NaN would be written into the ledger and poison every downstream sum.
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return NextResponse.json({
+          error: "Parsed an invalid amount from message",
+          receivedBody: messageBody
+        }, { status: 400 });
+      }
 
       // Check if it already exists
       const existing = await prisma.bkashLedger.findUnique({ where: { trxId } });

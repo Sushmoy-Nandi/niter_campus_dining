@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getStudentPeriodDeposits, isStudentAutoOff, calculateDynamicMealRate } from "@/lib/meal-utils"
+import { getStudentPeriodDeposits, isStudentAutoOff, calculateDynamicMealRate, toUTCDateKey, periodEndInclusive } from "@/lib/meal-utils"
+import { getMasterSheetSecret } from "@/lib/secrets"
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +9,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const secret = searchParams.get("secret")
   
-  const expectedSecret = process.env.MASTER_SHEET_SECRET || process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026"
+  const expectedSecret = getMasterSheetSecret()
   if (!secret || secret !== expectedSecret) {
     return new NextResponse("Unauthorized. Invalid secret key.", { status: 401 })
   }
@@ -31,9 +32,7 @@ export async function GET(req: Request) {
   const { mealRate } = await calculateDynamicMealRate(activePeriod.startDate, activePeriod.endDate)
 
   const periodStart = new Date(activePeriod.startDate)
-  const periodEnd = new Date(activePeriod.endDate)
-  periodEnd.setHours(23, 59, 59, 999) // Force end of day
-  periodEnd.setUTCHours(23, 59, 59, 999)
+  const periodEnd = periodEndInclusive(activePeriod.endDate)
 
   const allSchedules = await prisma.mealSchedule.findMany({
     where: { date: { gte: periodStart, lte: periodEnd } },
@@ -42,22 +41,22 @@ export async function GET(req: Request) {
   // Group schedules by date and student
   const scheduleMap = new Map<string, Map<string, any>>();
   allSchedules.forEach(s => {
-    const dStr = new Date(s.date).toISOString().split('T')[0];
+    const dStr = toUTCDateKey(s.date);
     if (!scheduleMap.has(dStr)) scheduleMap.set(dStr, new Map());
     scheduleMap.get(dStr)!.set(s.studentId, s);
   });
 
   const daysList: Date[] = []
-  for (let d = new Date(periodStart); d <= periodEnd; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(periodStart); d <= periodEnd; d.setUTCDate(d.getUTCDate() + 1)) {
     daysList.push(new Date(d))
   }
 
   let csvRows = []
-  
+
   // Headers
   let headerRow = ["SL", "Name", "Department", "Dining ID", "Total Deposit", "Cost", "On-Hand Balance", "Total Meals"]
   daysList.forEach(d => {
-    const dayNum = d.getDate()
+    const dayNum = d.getUTCDate()
     headerRow.push(`${dayNum}-L`)
     headerRow.push(`${dayNum}-D`)
   })
@@ -81,7 +80,7 @@ export async function GET(req: Request) {
         dailyRow.push("0")
         dailyRow.push("0")
       } else {
-        const dStr = d.toISOString().split('T')[0];
+        const dStr = toUTCDateKey(d);
         const s = scheduleMap.get(dStr)?.get(student.id);
         
         let l = 1, din = 1;
@@ -100,16 +99,19 @@ export async function GET(req: Request) {
     }
 
     const cost = totalMeals * mealRate;
-    const effectiveDeposit = balance;
+    // On-Hand is the live projection: deposits still held minus the running meal cost.
+    // (balance holds the total deposit during an active period; cost is transient until
+    // settlement permanently deducts it.)
+    const onHand = balance - cost;
 
     const row = [
       sl++,
       `"${student.name}"`,
       `"${student.department || ""}"`,
       `"${student.diningId || ""}"`,
-      effectiveDeposit.toFixed(2),
-      cost.toFixed(2),
       balance.toFixed(2),
+      cost.toFixed(2),
+      onHand.toFixed(2),
       totalMeals
     ]
     
@@ -128,7 +130,7 @@ export async function GET(req: Request) {
   
   const bazaarMap = new Map<string, number>();
   bazaars.forEach(b => {
-    const dStr = new Date(b.date).toISOString().split('T')[0];
+    const dStr = toUTCDateKey(b.date);
     bazaarMap.set(dStr, (bazaarMap.get(dStr) || 0) + b.amount);
   })
 
@@ -136,7 +138,7 @@ export async function GET(req: Request) {
   let dailyBazaarRow = [];
   
   for (let i = 0; i < daysList.length; i++) {
-    const dStr = daysList[i].toISOString().split('T')[0];
+    const dStr = toUTCDateKey(daysList[i]);
     const cost = bazaarMap.get(dStr) || 0;
     totalBazaarCostSum += cost;
     dailyBazaarRow.push(cost.toString()) // Put cost under Lunch column

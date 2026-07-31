@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { parsePagination } from "@/lib/utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,8 +19,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const page = parseInt(searchParams.get("page") || "1")
-    const limit = parseInt(searchParams.get("limit") || "20")
+    const { page, limit, skip } = parsePagination(searchParams)
     const type = searchParams.get("type")
 
     const where: any = { studentId: student.id }
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       prisma.transaction.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
+        skip,
         take: limit,
       }),
       prisma.transaction.count({ where }),

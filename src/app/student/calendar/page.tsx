@@ -25,12 +25,21 @@ export default function StudentCalendar() {
 
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
+  // A calendar cell represents a day on the viewer's (Bangladesh) wall calendar, so we key
+  // it by its LOCAL Y-M-D. Schedule rows are stored at UTC-midnight of that same BDT day, so
+  // we key those by their UTC Y-M-D. Both yield the same "YYYY-MM-DD" string, which is why
+  // this comparison is stable regardless of the browser's timezone — unlike toISOString(),
+  // which would shift a local-midnight cell back a day for any UTC+ viewer (off-by-one).
+  function ymdLocal(date: Date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+  }
+  function ymdUTC(date: Date) {
+    return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`
+  }
+
   function getScheduleForDate(date: Date) {
-    const ds = date.toISOString().split("T")[0]
-    return schedules.find((s) => {
-      const sd = new Date(s.date)
-      return sd.toISOString().split("T")[0] === ds
-    })
+    const ds = ymdLocal(date)
+    return schedules.find((s) => ymdUTC(new Date(s.date)) === ds)
   }
 
   function generateCalendarDays() {
@@ -101,7 +110,7 @@ export default function StudentCalendar() {
                   const today = new Date()
                   today.setHours(0, 0, 0, 0)
                   const isToday = date.getTime() === today.getTime()
-                  const hasMeals = schedule && (schedule.breakfast || schedule.lunch || schedule.dinner)
+                  const hasMeals = schedule && (schedule.lunch || schedule.dinner)
 
                   return (
                     <div
@@ -111,7 +120,6 @@ export default function StudentCalendar() {
                       <div className="text-xs font-medium">{date.getDate()}</div>
                       {schedule && hasMeals && (
                         <div className="mt-0.5 flex flex-col gap-0.5">
-                          {schedule.breakfast && <Badge variant="default" className="text-[10px] px-1 py-0 h-4">B</Badge>}
                           {schedule.lunch && <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">L</Badge>}
                           {schedule.dinner && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">D</Badge>}
                         </div>

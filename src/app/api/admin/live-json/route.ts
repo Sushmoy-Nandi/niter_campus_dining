@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getStudentPeriodDeposits, isStudentAutoOff, calculateDynamicMealRate } from "@/lib/meal-utils"
+import { getStudentPeriodDeposits, isStudentAutoOff, calculateDynamicMealRate, periodEndInclusive } from "@/lib/meal-utils"
+import { getMasterSheetSecret } from "@/lib/secrets"
 
 export const dynamic = 'force-dynamic'
 
@@ -9,7 +10,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const secret = searchParams.get("secret")
     
-    const expectedSecret = process.env.MASTER_SHEET_SECRET || process.env.NEXT_PUBLIC_MASTER_SHEET_SECRET || "NITER_MASTER_2026"
+    const expectedSecret = getMasterSheetSecret()
     if (!secret || secret !== expectedSecret) {
       return new NextResponse("Unauthorized. Invalid secret key.", { status: 401 })
     }
@@ -32,7 +33,7 @@ export async function GET(req: Request) {
     const rawTransactions = await prisma.transaction.findMany({
       where: {
         type: { in: ["DEPOSIT", "REFUND"] },
-        createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
+        createdAt: { gte: activePeriod.startDate, lte: periodEndInclusive(activePeriod.endDate) }
       },
       orderBy: { createdAt: "asc" }
     });

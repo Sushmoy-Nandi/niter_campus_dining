@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getCurrentMealRates, calculateDynamicMealRate, isStudentAutoOff } from "@/lib/meal-utils"
+import { getCurrentMealRates, calculateDynamicMealRate, isStudentAutoOff, getStudentPeriodDeposit, toUTCDateKey, periodEndInclusive } from "@/lib/meal-utils"
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -127,41 +127,31 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (activePeriod && student.isActive) {
       const pStart = new Date(activePeriod.startDate)
-      pStart.setHours(0, 0, 0, 0)
-      const pEnd = new Date(activePeriod.endDate)
-      pEnd.setHours(23, 59, 59, 999)
+      const pEnd = periodEndInclusive(activePeriod.endDate)
 
       // 1. Dynamic meal rate for the whole period (shared helper — same basis
       //    as the student dashboard so the numbers agree across views)
       const { mealRate } = await calculateDynamicMealRate(pStart, pEnd)
       dynamicMealRate = mealRate
 
-      // 2. This student's total meals for the ENTIRE period (Past + Future)
+      // 2. This student's total meals for the ENTIRE period (Past + Future).
+      //    Key by UTC calendar day (storage is UTC-midnight) so counts never
+      //    drift with the server timezone.
       const scheduleMap = new Map()
       student.mealSchedules.forEach((meal: any) => {
-        scheduleMap.set(new Date(meal.date).toDateString(), meal)
+        scheduleMap.set(toUTCDateKey(meal.date), meal)
       })
 
       // Fetch period deposit for auto-off logic
-      const deposits = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { 
-          studentId: student.id, 
-          type: "DEPOSIT",
-          createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
-        }
-      });
-      const periodDeposit = deposits._sum.amount || 0;
+      const periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
 
       let studentTotalMeals = 0
-      const d = new Date(pStart.getTime())
-      d.setHours(0, 0, 0, 0)
+      const d = new Date(pStart)
 
       while (d <= pEnd) {
         const { autoOff: dayAutoOff } = isStudentAutoOff(balance, activePeriod, d, periodDeposit);
         if (!dayAutoOff) {
-          const dateStr = d.toDateString()
-          const s = scheduleMap.get(dateStr)
+          const s = scheduleMap.get(toUTCDateKey(d))
           if (s) {
             if (s.lunch) studentTotalMeals += 1
             if (s.dinner) studentTotalMeals += 1
@@ -169,7 +159,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             studentTotalMeals += 2 // Default ON
           }
         }
-        d.setDate(d.getDate() + 1)
+        d.setUTCDate(d.getUTCDate() + 1)
       }
 
       // Total estimated cost for the month
@@ -190,15 +180,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     if (activePeriod) {
       const allSchedules = []
       const schedMap = new Map()
-      student.mealSchedules.forEach((m: any) => schedMap.set(new Date(m.date).toDateString(), m))
+      student.mealSchedules.forEach((m: any) => schedMap.set(toUTCDateKey(m.date), m))
 
       const tempD = new Date(activePeriod.startDate)
-      tempD.setHours(0, 0, 0, 0)
-      const tempEnd = new Date(activePeriod.endDate)
-      tempEnd.setHours(23, 59, 59, 999)
+      const tempEnd = periodEndInclusive(activePeriod.endDate)
 
       while (tempD <= tempEnd) {
-        const ds = tempD.toDateString()
+        const ds = toUTCDateKey(tempD)
         if (schedMap.has(ds)) {
           allSchedules.push(schedMap.get(ds))
         } else {
@@ -210,7 +198,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             isDefault: true // Just a flag
           })
         }
-        tempD.setDate(tempD.getDate() + 1)
+        tempD.setUTCDate(tempD.getUTCDate() + 1)
       }
       allSchedules.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       fullSchedules = allSchedules

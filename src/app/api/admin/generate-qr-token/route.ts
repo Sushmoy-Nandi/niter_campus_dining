@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import jwt from "jsonwebtoken"
+import { getQrTokenSecret } from "@/lib/secrets"
 
 export async function POST(req: Request) {
   try {
@@ -15,8 +16,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing date or mealType" }, { status: 400 })
     }
 
-    // Use AUTH_SECRET for signing the JWT
-    const secret = process.env.AUTH_SECRET || "fallback_secret_for_dev_only"
+    // Shared, fail-closed secret (AUTH_SECRET → NEXTAUTH_SECRET, else throws).
+    const secret = getQrTokenSecret()
 
     // Create a secure token that expires at the end of the specified day
     // Or just make it expire in 24 hours.

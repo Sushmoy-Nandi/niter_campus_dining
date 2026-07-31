@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { amount, method, accountNo } = body
 
-    if (!amount || amount <= 0 || !method || !accountNo) {
+    const parsedAmount = parseFloat(amount)
+    if (isNaN(parsedAmount) || parsedAmount <= 0 || !method || !accountNo) {
       return NextResponse.json({ error: "Invalid refund request data" }, { status: 400 })
     }
 
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     const request = await prisma.refundRequest.create({
       data: {
         studentId: student.id,
-        amount: parseFloat(amount),
+        amount: parsedAmount,
         method,
         accountNo,
       },

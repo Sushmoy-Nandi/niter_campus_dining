@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isStudentAutoOff, getStudentPeriodDeposits } from "@/lib/meal-utils"
+import { isStudentAutoOff, getStudentPeriodDeposits, toUTCDateKey } from "@/lib/meal-utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -60,10 +60,12 @@ export async function GET(req: NextRequest) {
       }
     })
 
+    // Key schedules by their UTC calendar day (storage is UTC-midnight). Using UTC here
+    // — and in the lookup loop below — keeps the report identical on any server timezone;
+    // en-CA / local getters silently shift days by one on hosts west of UTC.
     const scheduleMap = new Map()
     schedules.forEach(s => {
-      const d = new Date(s.date)
-      const dateStr = d.toLocaleDateString("en-CA")
+      const dateStr = toUTCDateKey(s.date)
       scheduleMap.set(`${s.studentId}-${dateStr}`, s)
     })
 
@@ -80,13 +82,10 @@ export async function GET(req: NextRequest) {
       const d = new Date(startDate)
       while (d <= endDate) {
         const { autoOff } = isStudentAutoOff(balance, activePeriod, d, periodDeposit);
-        const year = d.getFullYear()
-        const month = d.getMonth()
-        const day = d.getDate()
-        const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-        
+        const dateStr = toUTCDateKey(d)
+
         const s = scheduleMap.get(`${student.id}-${dateStr}`)
-        
+
         if (!autoOff) {
           if (s) {
             if (s.lunch) meals += 1
@@ -95,10 +94,8 @@ export async function GET(req: NextRequest) {
             meals += 2
           }
         }
-        
-        // Removed guest meals calculation
-        
-        d.setDate(d.getDate() + 1)
+
+        d.setUTCDate(d.getUTCDate() + 1)
       }
       
       systemTotalMeals += meals

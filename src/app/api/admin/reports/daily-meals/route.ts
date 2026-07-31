@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isStudentAutoOff, getStudentPeriodDeposits } from "@/lib/meal-utils"
+import { isStudentAutoOff, getStudentPeriodDeposits, toUTCDateKey } from "@/lib/meal-utils"
 
 export const dynamic = 'force-dynamic'
 
@@ -30,12 +30,14 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Invalid date format" }, { status: 400 })
     }
 
-    // Set to local day boundaries for accurate querying
+    // UTC day boundaries. Logical dates (schedules/periods) are stored at UTC
+    // midnight, so we must bound the range in UTC — setHours() would read the
+    // server's local day and drift the whole range by a day on non-UTC servers.
     const startOfDay = new Date(startDate)
-    startOfDay.setHours(0, 0, 0, 0)
-    
+    startOfDay.setUTCHours(0, 0, 0, 0)
+
     const endOfDay = new Date(endDate)
-    endOfDay.setHours(23, 59, 59, 999)
+    endOfDay.setUTCHours(23, 59, 59, 999)
 
     // Fetch active dining period for auto-off rules
     const activePeriod = await prisma.diningPeriod.findFirst({
@@ -104,30 +106,28 @@ export async function GET(req: Request) {
     const result = students.map(student => {
       const studentSchedules = scheduleMap.get(student.id) || []
       const periodDeposit = periodDepositMap.get(student.id) || 0;
-      
+
+      // Index this student's schedules by UTC day key for O(1), timezone-agnostic lookup.
+      const dayScheduleMap = new Map<string, any>();
+      studentSchedules.forEach((sched: any) => dayScheduleMap.set(toUTCDateKey(sched.date), sched));
+
       let lunch = 0;
       let dinner = 0;
 
       const balance = student.wallet?.balance || 0;
       let autoOff = false; // Just to reflect current status for the UI
-      
+
       const iterDate = new Date(startOfDay);
       while (iterDate <= endOfDay) {
         const { autoOff: dayAutoOff } = isStudentAutoOff(balance, activePeriod, iterDate, periodDeposit);
-        if (iterDate.getTime() === endOfDay.getTime()) {
-           autoOff = dayAutoOff; // Status as of the end of the range
-        }
-        
+        // The last loop pass is the end-of-range day, so this leaves `autoOff`
+        // holding that day's status. (The old `=== endOfDay` check never matched:
+        // iterDate is at 00:00:00 while endOfDay is 23:59:59.999.)
+        autoOff = dayAutoOff;
+
         if (!dayAutoOff) {
-          const year = iterDate.getFullYear();
-          const month = iterDate.getMonth();
-          const day = iterDate.getDate();
-          
-          const s = studentSchedules.find((sched: any) => {
-             const d = new Date(sched.date);
-             return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
-          });
-          
+          const s = dayScheduleMap.get(toUTCDateKey(iterDate));
+
           if (s) {
             if (s.lunch) lunch++;
             if (s.dinner) dinner++;
@@ -136,7 +136,7 @@ export async function GET(req: Request) {
             dinner++;
           }
         }
-        iterDate.setDate(iterDate.getDate() + 1);
+        iterDate.setUTCDate(iterDate.getUTCDate() + 1);
       }
 
       totalLunch += lunch;

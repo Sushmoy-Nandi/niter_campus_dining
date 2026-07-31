@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getBDTTodayStartUTC, periodEndInclusive } from "@/lib/meal-utils"
 
-const LOW_BALANCE_THRESHOLD = 3000;
+const DEFAULT_LOW_BALANCE_THRESHOLD = 3000;
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,12 +12,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Both the threshold and the turn-off window are derived from the ACTIVE dining period,
+    // so this action stays correct for any future period length/config. We fall back to the
+    // default threshold + calendar month only when no period is active.
+    const activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true } })
+    const threshold = activePeriod?.minimumDeposit ?? DEFAULT_LOW_BALANCE_THRESHOLD
+
     // 1. Find all active students with low balance
     const students = await prisma.student.findMany({
       where: {
         isActive: true,
         wallet: {
-          balance: { lt: LOW_BALANCE_THRESHOLD }
+          balance: { lt: threshold }
         }
       },
       include: { wallet: true }
@@ -26,23 +33,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "No active students have a low balance." })
     }
 
-    // 2. Generate dates to turn off (from tomorrow to the end of the current month)
-    const now = new Date()
-    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+    // 2. Build the UTC-midnight day keys to turn off: from tomorrow (BDT) through the end of
+    // the active period (inclusive). Keying in UTC — the same convention the whole app uses —
+    // guarantees these upserts collide with the existing @@unique([studentId, date]) rows
+    // instead of silently creating duplicates that no other query would ever read.
+    const today = getBDTTodayStartUTC()
+    const tomorrow = new Date(today)
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
 
-    let datesToOff: Date[] = []
-    let d = new Date(tomorrow)
-    while (d <= endOfMonth) {
+    const windowEnd = activePeriod
+      ? periodEndInclusive(activePeriod.endDate)
+      : new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0, 23, 59, 59, 999))
+
+    const datesToOff: Date[] = []
+    const d = new Date(tomorrow)
+    while (d <= windowEnd) {
       datesToOff.push(new Date(d))
-      d.setDate(d.getDate() + 1)
+      d.setUTCDate(d.getUTCDate() + 1)
+    }
+
+    if (datesToOff.length === 0) {
+      return NextResponse.json({ message: "No future dates remain in the current period to turn off." })
     }
 
     // 3. For each student, upsert their schedules for these dates to be OFF
     let updatedCount = 0;
-    
-    // We do this in a transaction or a loop. A loop with Promise.all is fine since Prisma handles it.
-    // However, it can be heavy. Let's do a grouped upsert or loop.
+
     for (const student of students) {
       for (const date of datesToOff) {
         await prisma.mealSchedule.upsert({
@@ -64,8 +80,8 @@ export async function POST(req: NextRequest) {
       updatedCount++;
     }
 
-    return NextResponse.json({ 
-      message: `Turned OFF future meals for ${updatedCount} low-balance students.` 
+    return NextResponse.json({
+      message: `Turned OFF future meals for ${updatedCount} low-balance students.`
     })
   } catch (error) {
     console.error("Turn off low balance error:", error)

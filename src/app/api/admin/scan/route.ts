@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { isStudentAutoOff } from "@/lib/meal-utils"
+import { isStudentAutoOff, getStudentPeriodDeposit } from "@/lib/meal-utils"
 
 export async function POST(req: NextRequest) {
   try {
@@ -75,15 +75,7 @@ export async function POST(req: NextRequest) {
     })
     let periodDeposit = 0;
     if (activePeriod) {
-      const deposits = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { 
-          studentId: student.id, 
-          type: "DEPOSIT",
-          createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
-        }
-      });
-      periodDeposit = deposits._sum.amount || 0;
+      periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
     }
 
     const balance = student.wallet?.balance || 0;

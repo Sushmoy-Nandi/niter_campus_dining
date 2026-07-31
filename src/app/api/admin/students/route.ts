@@ -3,6 +3,7 @@ import { hash } from "bcryptjs"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { adminCreateStudentSchema } from "@/lib/validations"
+import { parsePagination } from "@/lib/utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,8 +14,7 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const search = searchParams.get("search") || ""
-    const page = parseInt(searchParams.get("page") || "1")
-    const limit = parseInt(searchParams.get("limit") || "20")
+    const { page, limit, skip } = parsePagination(searchParams)
     const active = searchParams.get("active")
 
     const where: any = {}
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
         where,
         include: { wallet: true },
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
+        skip,
         take: limit,
       }),
       prisma.student.count({ where }),

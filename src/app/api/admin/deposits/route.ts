@@ -3,8 +3,9 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { depositSchema } from "@/lib/validations"
 import { sendEmail } from "@/lib/email"
-import { isStudentAutoOff } from "@/lib/meal-utils"
+import { isStudentAutoOff, getStudentPeriodDeposit } from "@/lib/meal-utils"
 import { triggerLiveSheetSync } from "@/lib/google-sync"
+import { parsePagination } from "@/lib/utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,15 +15,14 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const page = parseInt(searchParams.get("page") || "1")
-    const limit = parseInt(searchParams.get("limit") || "20")
+    const { page, limit, skip } = parsePagination(searchParams)
 
     const [deposits, total] = await Promise.all([
       prisma.transaction.findMany({
         where: { type: "DEPOSIT" },
         include: { student: { select: { name: true, diningId: true } } },
         orderBy: { createdAt: "desc" },
-        skip: (page - 1) * limit,
+        skip,
         take: limit,
       }),
       prisma.transaction.count({ where: { type: "DEPOSIT" } }),
@@ -66,15 +66,7 @@ export async function POST(req: NextRequest) {
     const activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true } })
     let periodDeposit = 0;
     if (activePeriod) {
-      const deposits = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { 
-          studentId: student.id, 
-          type: "DEPOSIT",
-          createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
-        }
-      });
-      periodDeposit = deposits._sum.amount || 0;
+      periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
     }
 
     const oldBalance = student.wallet?.balance || 0;

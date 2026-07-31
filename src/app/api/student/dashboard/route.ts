@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getCurrentMealRates, calculateDynamicMealRate, isStudentAutoOff, getStudentPeriodDeposits } from "@/lib/meal-utils"
+import { getCurrentMealRates, calculateDynamicMealRate, isStudentAutoOff, getStudentPeriodDeposits, getStudentPeriodDeposit, toUTCDateKey, getBDTTodayStartUTC } from "@/lib/meal-utils"
 
 export async function GET(req: NextRequest) {
   try {
@@ -19,12 +19,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Student not found" }, { status: 404 })
     }
 
-    const now = new Date()
-    // Use Bangladesh time for "today" to match all other APIs
-    const bdtString = now.toLocaleString("en-US", { timeZone: "Asia/Dhaka" })
-    const bdtNow = new Date(bdtString)
-    const today = new Date(Date.UTC(bdtNow.getFullYear(), bdtNow.getMonth(), bdtNow.getDate()))
-    
+    // "Today" as the Bangladesh calendar day floored to UTC midnight — the canonical key.
+    const today = getBDTTodayStartUTC()
+
     const tomorrow = new Date(today)
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
 
@@ -42,8 +39,8 @@ export async function GET(req: NextRequest) {
 
     // Find active dining period
     const activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true } })
-    let periodStart = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1))
-    let periodEnd = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999))
+    let periodStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1))
+    let periodEnd = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0, 23, 59, 59, 999))
     let periodId = ""
     let periodDeposit = 0;
 
@@ -53,15 +50,7 @@ export async function GET(req: NextRequest) {
       periodEnd.setUTCHours(23, 59, 59, 999)
       periodId = activePeriod.id
 
-      const deposits = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { 
-          studentId: student.id, 
-          type: "DEPOSIT",
-          createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
-        }
-      });
-      periodDeposit = deposits._sum.amount || 0;
+      periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
     }
 
     const balance = student.wallet?.balance || 0
@@ -74,14 +63,10 @@ export async function GET(req: NextRequest) {
       },
     })
 
+    // Key by UTC calendar day (storage is UTC-midnight) so counts are server-tz-agnostic.
     const scheduleMap = new Map();
     monthlySchedules.forEach(s => {
-      const d = new Date(s.date);
-      const year = d.getFullYear();
-      const month = d.getMonth();
-      const day = d.getDate();
-      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      scheduleMap.set(dateStr, s);
+      scheduleMap.set(toUTCDateKey(s.date), s);
     });
 
     let monthlyMealCount = 0;
@@ -89,11 +74,7 @@ export async function GET(req: NextRequest) {
     while (iterDate <= periodEnd) {
       const { autoOff: dayAutoOff } = isStudentAutoOff(balance, activePeriod, iterDate, periodDeposit);
       if (!dayAutoOff) {
-        const year = iterDate.getFullYear();
-        const month = iterDate.getMonth();
-        const day = iterDate.getDate();
-        const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-        const s = scheduleMap.get(dateStr);
+        const s = scheduleMap.get(toUTCDateKey(iterDate));
         if (s) {
           if (s.lunch) monthlyMealCount++;
           if (s.dinner) monthlyMealCount++;
@@ -101,7 +82,7 @@ export async function GET(req: NextRequest) {
           monthlyMealCount += 2; // Default 2 meals
         }
       }
-      iterDate.setDate(iterDate.getDate() + 1);
+      iterDate.setUTCDate(iterDate.getUTCDate() + 1);
     }
 
     // Dynamic "Mess-style" spending: this student's total meals × current bazaar rate

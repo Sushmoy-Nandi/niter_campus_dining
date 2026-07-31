@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getCurrentMealRates, isStudentAutoOff } from "@/lib/meal-utils"
+import { getCurrentMealRates, isStudentAutoOff, getStudentPeriodDeposit } from "@/lib/meal-utils"
 import { triggerLiveSheetSync } from "@/lib/google-sync"
 
 export async function GET(req: NextRequest) {
@@ -54,15 +54,7 @@ export async function GET(req: NextRequest) {
     
     let periodDeposit = 0;
     if (activePeriod) {
-      const deposits = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { 
-          studentId: student.id, 
-          type: "DEPOSIT",
-          createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
-        }
-      });
-      periodDeposit = deposits._sum.amount || 0;
+      periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
     }
 
     const balance = student.wallet?.balance || 0
@@ -128,7 +120,7 @@ export async function POST(req: NextRequest) {
 
     if (pastDeadline) {
       return NextResponse.json(
-        { error: "Changes must be made before 10:00 PM BST the day before" },
+        { error: "Changes must be made before 10:00 PM BDT the day before" },
         { status: 400 }
       )
     }
@@ -136,15 +128,7 @@ export async function POST(req: NextRequest) {
     const activePeriod = await prisma.diningPeriod.findFirst({ where: { isActive: true } })
     let periodDeposit = 0;
     if (activePeriod) {
-      const deposits = await prisma.transaction.aggregate({
-        _sum: { amount: true },
-        where: { 
-          studentId: student.id, 
-          type: "DEPOSIT",
-          createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
-        }
-      });
-      periodDeposit = deposits._sum.amount || 0;
+      periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
     }
 
     const currentBalance = student.wallet?.balance || 0;

@@ -28,20 +28,53 @@ export async function calculateDailyCharge(
   return { lunchCharge, dinnerCharge, totalCharge }
 }
 
+/**
+ * The current instant expressed as Bangladesh (Asia/Dhaka) wall-clock time.
+ * The returned Date's LOCAL getters (getFullYear/getMonth/getDate/getHours…)
+ * read out the Dhaka calendar fields regardless of the server's own timezone.
+ */
+export function getBDTNow(): Date {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Dhaka" }))
+}
+
+/**
+ * UTC-midnight Date matching *today's* calendar date in Bangladesh. This is the
+ * canonical "today" used everywhere schedules/periods are keyed, and it is
+ * invariant to the server's own timezone (works identically on UTC, GMT+6, or US servers).
+ */
+export function getBDTTodayStartUTC(): Date {
+  const bdt = getBDTNow()
+  return new Date(Date.UTC(bdt.getFullYear(), bdt.getMonth(), bdt.getDate()))
+}
+
+/**
+ * Canonical day key (YYYY-MM-DD) for any stored logical date. Because logical
+ * dates are persisted at UTC midnight, the UTC calendar date is the correct,
+ * server-timezone-agnostic key. NEVER use getFullYear/getMonth/getDate for keys —
+ * those read the server-local day and drift by one on servers west of UTC.
+ */
+export function toUTCDateKey(date: Date | string): string {
+  return new Date(date).toISOString().slice(0, 10)
+}
+
+/**
+ * A copy of a period's end date stretched to the final millisecond of that day
+ * (UTC) so inclusive `lte` range queries reliably capture last-day rows.
+ */
+export function periodEndInclusive(endDate: Date | string): Date {
+  const d = new Date(endDate)
+  d.setUTCHours(23, 59, 59, 999)
+  return d
+}
+
+// Backwards-compatible aliases (previous implementations were server-timezone
+// dependent and produced an off-by-one day on non-UTC servers).
 export function getTodayInBDT(): Date {
-  const now = new Date()
-  const bdtOffset = 6 * 60
-  const localOffset = now.getTimezoneOffset()
-  const bdtTime = new Date(now.getTime() + (bdtOffset + localOffset) * 60000)
-  bdtTime.setUTCHours(0, 0, 0, 0)
-  return bdtTime
+  return getBDTTodayStartUTC()
 }
 
 export function getDateString(date: Date): string {
-  const d = new Date(date)
-  const offset = d.getTimezoneOffset()
-  const local = new Date(d.getTime() - offset * 60000)
-  return local.toISOString().split("T")[0]
+  return toUTCDateKey(date)
 }
 
 export function formatCurrency(amount: number): string {
@@ -55,7 +88,7 @@ export async function getStudentPeriodDeposits(activePeriod: any) {
     _sum: { amount: true },
     where: {
       type: "DEPOSIT",
-      createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
+      createdAt: { gte: activePeriod.startDate, lte: periodEndInclusive(activePeriod.endDate) }
     }
   });
   const map = new Map<string, number>();
@@ -63,6 +96,27 @@ export async function getStudentPeriodDeposits(activePeriod: any) {
     map.set(d.studentId, d._sum.amount || 0);
   }
   return map;
+}
+
+/**
+ * Total DEPOSIT amount for ONE student within a dining period.
+ * Single source of truth for the period-deposit bound: the upper edge is the
+ * INCLUSIVE end of the period's last calendar day (23:59:59.999), so a deposit
+ * made at any time on the final day is always counted. Every route that needs a
+ * student's period deposit must call this instead of building the range inline,
+ * otherwise a same-day deposit silently drops out of auto-off / invoice math.
+ */
+export async function getStudentPeriodDeposit(studentId: string, activePeriod: any): Promise<number> {
+  if (!activePeriod) return 0;
+  const deposits = await prisma.transaction.aggregate({
+    _sum: { amount: true },
+    where: {
+      studentId,
+      type: "DEPOSIT",
+      createdAt: { gte: activePeriod.startDate, lte: periodEndInclusive(activePeriod.endDate) }
+    }
+  });
+  return deposits._sum.amount || 0;
 }
 
 export function isStudentAutoOff(
@@ -119,21 +173,23 @@ export async function calculateDynamicMealRate(startDate: Date, endDate: Date) {
   // Group schedules by date and student
   const scheduleMap = new Map<string, Map<string, any>>();
   allSchedules.forEach(s => {
-    const dStr = new Date(s.date).toISOString().split('T')[0];
+    const dStr = toUTCDateKey(s.date);
     if (!scheduleMap.has(dStr)) scheduleMap.set(dStr, new Map());
     scheduleMap.get(dStr)!.set(s.studentId, s);
   });
 
   let totalMeals = 0
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const dStr = d.toISOString().split('T')[0];
+  const iter = new Date(startDate)
+  const rangeEnd = periodEndInclusive(endDate)
+  while (iter <= rangeEnd) {
+    const dStr = toUTCDateKey(iter);
     const dailySchedules = scheduleMap.get(dStr) || new Map();
-    
+
     // For each active student, determine if they are eating
     for (const student of students) {
       const balance = student.wallet?.balance || 0;
       const periodDeposit = periodDepositMap.get(student.id) || 0;
-      const { autoOff } = isStudentAutoOff(balance, activePeriod, d, periodDeposit);
+      const { autoOff } = isStudentAutoOff(balance, activePeriod, iter, periodDeposit);
 
       if (!autoOff) {
         const s = dailySchedules.get(student.id);
@@ -145,6 +201,7 @@ export async function calculateDynamicMealRate(startDate: Date, endDate: Date) {
         }
       }
     }
+    iter.setUTCDate(iter.getUTCDate() + 1)
   }
 
   const mealRate = totalMeals > 0 ? totalBazaarCost / totalMeals : 0
@@ -179,7 +236,23 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
   // Stretch periodEnd to the very end of the day so Prisma catches schedules on the last day
   periodEnd.setUTCHours(23, 59, 59, 999)
 
+  // Notifications are buffered and only sent after the transaction commits,
+  // so a rolled-back settlement can never email a false "complete" notice.
+  const settlementEmails: { to: string; subject: string; html: string }[] = []
+
   await prisma.$transaction(async (tx) => {
+    // Atomically claim this period for settlement. Only the first concurrent call
+    // flips isSettled false→true and matches a row; a racing double-settle matches
+    // zero rows, throws, and rolls back before any wallet is touched — so meal costs
+    // and rollovers can never be applied twice.
+    const claim = await tx.diningPeriod.updateMany({
+      where: { id: period.id, isSettled: false },
+      data: { isSettled: true },
+    })
+    if (claim.count === 0) {
+      throw new Error("ALREADY_SETTLED")
+    }
+
     for (const student of students) {
       const balance = student.wallet?.balance || 0;
       const periodDeposit = periodDepositMap.get(student.id) || 0;
@@ -195,16 +268,17 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
       // Build schedule map for this student
       const studentScheduleMap = new Map();
       for (const schedule of monthlySchedules) {
-        const dStr = new Date(schedule.date).toISOString().split('T')[0];
+        const dStr = toUTCDateKey(schedule.date);
         studentScheduleMap.set(dStr, schedule);
       }
 
       // Iterate day by day, checking auto-off for each day
       const iterDate = new Date(periodStart);
-      while (iterDate <= periodEnd) {
+      const rangeEnd = periodEndInclusive(period.endDate);
+      while (iterDate <= rangeEnd) {
         const { autoOff } = isStudentAutoOff(balance, period, iterDate, periodDeposit);
         if (!autoOff) {
-          const dStr = iterDate.toISOString().split('T')[0];
+          const dStr = toUTCDateKey(iterDate);
           const s = studentScheduleMap.get(dStr);
           if (s) {
             if (s.lunch) monthlyMealCount += 1;
@@ -213,13 +287,15 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
             monthlyMealCount += 2; // Default: both meals ON
           }
         }
-        iterDate.setDate(iterDate.getDate() + 1);
+        iterDate.setUTCDate(iterDate.getUTCDate() + 1);
       }
 
       let remainingBalance = student.wallet?.balance || 0;
 
       if (monthlyMealCount > 0) {
         const cost = monthlyMealCount * mealRate
+        // Deduct the meal cost exactly once. The wallet's .balance ALREADY reflects
+        // all deposits made during the period, so we only need to subtract the cost.
         remainingBalance -= cost;
 
         if (cost > 0) {
@@ -238,11 +314,12 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
           })
         }
       }
-      // Record the rollover in the transaction history as requested by the user
+      // Record the rollover in the transaction history as requested by the user.
+      // At this point remainingBalance = (original wallet balance) - (meal cost).
       if (remainingBalance > 0) {
         const rolloverDate = nextPeriodStartDate ? new Date(nextPeriodStartDate) : new Date();
 
-        // 1. Withdraw it from the old period via an ADJUSTMENT
+        // 1. Withdraw it from the old period via an ADJUSTMENT (decrement the wallet)
         await tx.wallet.update({
           where: { studentId: student.id },
           data: { balance: { decrement: remainingBalance } },
@@ -257,7 +334,7 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
           },
         })
 
-        // 2. Deposit it into the new period so they see it in their history
+        // 2. Deposit it into the new period so they see it in their history (increment the wallet back)
         await tx.wallet.update({
           where: { studentId: student.id },
           data: { balance: { increment: remainingBalance } },
@@ -273,11 +350,11 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
         })
       }
 
-      // Fire and forget email notification
-      sendEmail(
-        student.email,
-        `Monthly Dining Settlement: ${period.title}`,
-        `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+      // Buffer the notification; it is flushed only after the transaction commits.
+      settlementEmails.push({
+        to: student.email,
+        subject: `Monthly Dining Settlement: ${period.title}`,
+        html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
           <h2 style="color: #0f766e;">Monthly Settlement Complete</h2>
           <p>Hello <strong>${student.name}</strong>,</p>
           <p>The dining period <strong>${period.title}</strong> has been officially settled.</p>
@@ -302,16 +379,23 @@ export async function settleDiningPeriod(periodId: string, nextPeriodStartDate?:
           <p style="font-size: 14px;">The remaining balance has been automatically transferred to your account for the next month.</p>
           <p style="margin-top: 30px; font-size: 14px; color: #64748b;">Thank you,<br/>Campus Dining Administration</p>
         </div>`
-      )
+      })
     }
 
-    await tx.diningPeriod.update({
-      where: { id: period.id },
-      data: { isSettled: true },
-    })
+    // isSettled was already flipped by the atomic claim at the top of this
+    // transaction; no second write is needed here.
   }, {
     timeout: 20000,
   })
+
+  // Transaction committed successfully — now flush the buffered notifications.
+  // Each send is independently guarded so one failed email cannot abort the rest,
+  // and the settlement itself is already durable regardless of email delivery.
+  for (const mail of settlementEmails) {
+    sendEmail(mail.to, mail.subject, mail.html).catch((err) => {
+      console.error(`Settlement email failed for ${mail.to}:`, err)
+    })
+  }
 
   return { message: "Period settled successfully", periodId }
 }

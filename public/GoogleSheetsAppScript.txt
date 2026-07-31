@@ -12,10 +12,23 @@
 
 const CONFIG = {
   // Replace with your actual live deployed URL (e.g., https://your-app.vercel.app)
-  API_URL: 'http://localhost:3000', 
+  API_URL: 'http://localhost:3000',
   // Replace with your NEXT_PUBLIC_MASTER_SHEET_SECRET
   SECRET_KEY: 'YOUR_SECRET_KEY_HERE'
 };
+
+// Convert a 1-based column index to its A1 letter(s): 1 -> "A", 27 -> "AA", 91 -> "CM".
+// Used so every formula can reference dynamically-positioned columns by letter.
+function colToA1(col) {
+  let s = '';
+  let n = col;
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
+}
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
@@ -46,10 +59,30 @@ function buildSheetWithData(data) {
     sheet.clear();
   }
   
-  // Set basic dimensions (max 305 rows, 91 columns)
+  // --- DYNAMIC LAYOUT ---
+  // Everything on the right side of the sheet is positioned relative to the real
+  // number of days in this period (data.days.length), so a 28-, 30-, 31- or 35-day
+  // period all stay perfectly aligned. Nothing here assumes a fixed 31 or 35 days.
+  const numDays = data.days.length;             // e.g. 30
+  const DATE_START_COL = 16;                    // Col P: first day's Lunch column
+  const totalMealsCol = DATE_START_COL + numDays * 2;   // right after the last day's L/D pair
+  const blankCol = totalMealsCol + 1;
+  const bazDateCol = totalMealsCol + 2;         // Bazaar block starts one blank col after Total Meals
+  const bazNameCol = bazDateCol + 1;
+  const bazDetailsCol = bazDateCol + 2;
+  const bazCostCol = bazDateCol + 3;
+  const lastCol = bazCostCol;
+
+  // A1 letters for the columns formulas need to reference dynamically.
+  const totalMealsA1 = colToA1(totalMealsCol);
+  const dateFirstA1 = colToA1(DATE_START_COL);
+  const dateLastA1 = colToA1(totalMealsCol - 1);
+  const bazCostA1 = colToA1(bazCostCol);
+
+  // Set basic dimensions
   const requiredRows = Math.max(305, data.students.length + 10);
   if (sheet.getMaxRows() < requiredRows) sheet.insertRowsAfter(sheet.getMaxRows(), requiredRows - sheet.getMaxRows());
-  if (sheet.getMaxColumns() < 91) sheet.insertColumnsAfter(sheet.getMaxColumns(), 91 - sheet.getMaxColumns());
+  if (sheet.getMaxColumns() < lastCol) sheet.insertColumnsAfter(sheet.getMaxColumns(), lastCol - sheet.getMaxColumns());
   
   // Colors
   const colorA_G = '#c9daf8';
@@ -82,21 +115,21 @@ function buildSheetWithData(data) {
   sheet.setColumnWidth(13, 35); // M: Blank
   sheet.setColumnWidth(14, 100);// N: ID
   sheet.setColumnWidth(15, 170);// O: Name
-  
-  // P to BY (31 Dates - 2 columns each L/D = 62 columns)
-  let cIndex = 16;
-  for (let i = 0; i < 35; i++) {
+
+  // Date columns: P onwards, 2 columns (L/D) per day, dynamically allocated.
+  let cIndex = DATE_START_COL;
+  for (let i = 0; i < numDays; i++) {
     sheet.setColumnWidth(cIndex, 32);
     sheet.setColumnWidth(cIndex + 1, 32);
     cIndex += 2;
   }
-  
-  sheet.setColumnWidth(86, 75); // BZ: Total Meals
-  sheet.setColumnWidth(87, 35); // CA: Blank
-  sheet.setColumnWidth(88, 110);// CB: Date
-  sheet.setColumnWidth(89, 160);// CC: Name
-  sheet.setColumnWidth(90, 300);// CD: Bazaar Details
-  sheet.setColumnWidth(91, 110);// CE: Cost
+
+  sheet.setColumnWidth(totalMealsCol, 75); // Total Meals
+  sheet.setColumnWidth(blankCol, 35);       // Blank
+  sheet.setColumnWidth(bazDateCol, 110);    // Date
+  sheet.setColumnWidth(bazNameCol, 160);    // Name
+  sheet.setColumnWidth(bazDetailsCol, 300); // Bazaar Details
+  sheet.setColumnWidth(bazCostCol, 110);    // Cost
   
   // --- ROW 1 & 2 HEADERS ---
   sheet.setRowHeight(1, 40);
@@ -150,8 +183,8 @@ function buildSheetWithData(data) {
   setHeader(14, 'ID', '', colorO_CF);
   setHeader(15, 'Name', '', colorO_CF);
   
-  let dateCol = 16; // Col P
-  for (let i = 0; i < 35; i++) {
+  let dateCol = DATE_START_COL; // Col P
+  for (let i = 0; i < numDays; i++) {
     const dStr = data.days[i];
     const range = sheet.getRange(1, dateCol);
     if (dStr) {
@@ -167,12 +200,12 @@ function buildSheetWithData(data) {
       .setHorizontalAlignment("center").setVerticalAlignment("middle").setBorder(true, true, true, true, false, false);
     dateCol += 2;
   }
-  
-  setHeader(86, 'Total Meals', '', colorO_CF);
-  setHeader(88, 'Date', '', colorO_CF);
-  setHeader(89, 'Name', '', colorO_CF);
-  setHeader(90, 'Bazaar Details', '', colorO_CF);
-  setHeader(91, 'Cost', '', colorO_CF);
+
+  setHeader(totalMealsCol, 'Total Meals', '', colorO_CF);
+  setHeader(bazDateCol, 'Date', '', colorO_CF);
+  setHeader(bazNameCol, 'Name', '', colorO_CF);
+  setHeader(bazDetailsCol, 'Bazaar Details', '', colorO_CF);
+  setHeader(bazCostCol, 'Cost', '', colorO_CF);
   
   // --- STUDENT ROWS DATA ---
   if (data.students.length > 0) {
@@ -180,21 +213,25 @@ function buildSheetWithData(data) {
     const values = [];
     
     for (const student of data.students) {
-      const row = new Array(91).fill('');
-      row[0] = student.diningId; // A: ID
-      row[1] = student.name;     // B: Name
-      row[2] = student.deposit;  // C: Deposit 1
-      row[3] = 0;                // D: Deposit 2
-      row[4] = 0;                // E: Deposit 3
-      row[5] = `=SUM(C${r}:E${r})`; // F: Total Deposit
-      row[7] = `=SUM(F${r}+0)`;    // H: Deposit
-      row[8] = `=CH${r}*$L$4`;     // I: Cost
-      row[9] = `=H${r}-I${r}`;     // J: On-Hand
-      row[13] = student.diningId; // N: ID
-      row[14] = student.name;     // O: Name
-      
-      let mc = 15; // Col P
-      for (let i = 0; i < 35; i++) {
+      const row = new Array(lastCol).fill('');
+      // Individual deposits come as an array (Deposit 1..3); show each in its own
+      // column so admins see the real breakdown instead of the lump total.
+      const deps = student.deposits || [student.deposit];
+      row[0] = student.diningId;       // A: ID
+      row[1] = student.name;           // B: Name
+      row[2] = deps[0] != null ? deps[0] : 0; // C: Deposit 1
+      row[3] = deps[1] != null ? deps[1] : 0; // D: Deposit 2
+      row[4] = deps[2] != null ? deps[2] : 0; // E: Deposit 3
+      row[5] = `=SUM(C${r}:E${r})`;    // F: Total Deposit
+      row[7] = `=SUM(F${r}+0)`;        // H: Deposit
+      // I: Cost = this student's total meals * the sheet's dynamic meal rate (L4)
+      row[8] = `=${totalMealsA1}${r}*$L$4`;
+      row[9] = `=H${r}-I${r}`;         // J: On-Hand
+      row[13] = student.diningId;      // N: ID
+      row[14] = student.name;          // O: Name
+
+      let mc = DATE_START_COL - 1; // 0-based index of Col P
+      for (let i = 0; i < numDays; i++) {
         const mealData = student.meals[i];
         if (mealData) {
           row[mc] = mealData.l;
@@ -205,21 +242,22 @@ function buildSheetWithData(data) {
         }
         mc += 2;
       }
-      row[85] = `=SUM(P${r}:CG${r})`; // BZ: Total Meals
+      // Total Meals = sum of every L/D cell for this student (dynamic range).
+      row[totalMealsCol - 1] = `=SUM(${dateFirstA1}${r}:${dateLastA1}${r})`;
       values.push(row);
       r++;
     }
-    
-    const dataRange = sheet.getRange(3, 1, data.students.length, 91);
+
+    const dataRange = sheet.getRange(3, 1, data.students.length, lastCol);
     dataRange.setValues(values);
     dataRange.setHorizontalAlignment("center");
-    
+
     // Set specific borders
     sheet.getRange(3, 1, data.students.length, 6).setBorder(true, true, true, true, false, false);
     sheet.getRange(3, 8, data.students.length, 3).setBorder(true, true, true, true, false, false);
-    sheet.getRange(3, 14, data.students.length, 73).setBorder(true, true, true, true, false, false);
-    sheet.getRange(3, 86, data.students.length, 1).setBackground(colorTotalMeals).setNumberFormat('0');
-    
+    sheet.getRange(3, 14, data.students.length, (totalMealsCol - 14 + 1)).setBorder(true, true, true, true, false, false);
+    sheet.getRange(3, totalMealsCol, data.students.length, 1).setBackground(colorTotalMeals).setNumberFormat('0');
+
     // Strict Number Formats to avoid Date Auto-formatting
     sheet.getRange(3, 3, data.students.length, 4).setNumberFormat('0.00'); // C, D, E, F
     sheet.getRange(3, 8, data.students.length, 3).setNumberFormat('0.00'); // H, I, J
@@ -229,9 +267,9 @@ function buildSheetWithData(data) {
   sheet.getRange('L3').setValue('Current Meal Rate').setFontWeight("bold").setHorizontalAlignment("center");
   sheet.getRange('L4').setFormula('=IFERROR(L11/L7, 0)').setHorizontalAlignment("center").setFontWeight("bold").setNumberFormat('0.00');
   sheet.getRange('L6').setValue('Total Meal Count').setFontWeight("bold").setHorizontalAlignment("center");
-  sheet.getRange('L7').setFormula(`=SUM(CH3:CH${lastRow})`).setNumberFormat('0').setHorizontalAlignment("center");
+  sheet.getRange('L7').setFormula(`=SUM(${totalMealsA1}3:${totalMealsA1}${lastRow})`).setNumberFormat('0').setHorizontalAlignment("center");
   sheet.getRange('L10').setValue('Total Cost').setFontWeight("bold").setHorizontalAlignment("center");
-  sheet.getRange('L11').setFormula(`=SUM(CM3:CM${lastRow})`).setNumberFormat('0.00').setHorizontalAlignment("center");
+  sheet.getRange('L11').setFormula(`=SUM(${bazCostA1}3:${bazCostA1}${lastRow})`).setNumberFormat('0.00').setHorizontalAlignment("center");
   sheet.getRange('L13').setValue('On-Hand').setFontWeight("bold").setHorizontalAlignment("center");
   sheet.getRange('L14').setFormula(`=SUM(J3:J${lastRow})`).setNumberFormat('0.00').setHorizontalAlignment("center");
   
@@ -247,25 +285,28 @@ function buildSheetWithData(data) {
   sheet.getRange(tr, 5).setFormula(`=SUM(E3:E${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat('0.00');
   sheet.getRange(tr, 6).setFormula(`=SUM(F3:F${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat('0.00').setBorder(true, true, true, true, false, false);
   
-  for (let c = 16; c <= 85; c++) {
-    let ltr = sheet.getRange(1, c).getA1Notation().match(/([A-Z]+)/)[0];
+  // Totals for every day column (P .. last day), summing each column down.
+  for (let c = DATE_START_COL; c < totalMealsCol; c++) {
+    const ltr = colToA1(c);
     sheet.getRange(tr, c).setFormula(`=SUM(${ltr}3:${ltr}${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
   }
-  
-  sheet.getRange(tr, 78).setFormula(`=SUM(P${tr}:BY${tr})`).setBackground(colorTotalMeals).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
-  sheet.getRange(tr, 83).setFormula(`=SUM(CM3:CM${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat('0.00').setBorder(true, true, true, true, false, false);
-  
+
+  // Grand total of every student's Total Meals (sum the Total Meals column down).
+  sheet.getRange(tr, totalMealsCol).setFormula(`=SUM(${totalMealsA1}3:${totalMealsA1}${lastRow})`).setBackground(colorTotalMeals).setFontWeight("bold").setHorizontalAlignment("center").setBorder(true, true, true, true, false, false);
+  // Grand total of all bazaar costs.
+  sheet.getRange(tr, bazCostCol).setFormula(`=SUM(${bazCostA1}3:${bazCostA1}${lastRow})`).setFontWeight("bold").setHorizontalAlignment("center").setNumberFormat('0.00').setBorder(true, true, true, true, false, false);
+
   // --- BAZAAR SECTION DATA ---
   const bazaarRowsCount = Math.max(data.bazaars.length, 100);
-  sheet.getRange(3, 83, bazaarRowsCount, 1).setNumberFormat('0.00');
-  
+  sheet.getRange(3, bazCostCol, bazaarRowsCount, 1).setNumberFormat('0.00');
+
   let bRow = 3;
   for (const b of data.bazaars) {
     if (bRow > lastRow) break;
-    sheet.getRange(bRow, 80).setValue(new Date(b.date)).setNumberFormat('dd-MMM-yyyy').setBorder(true, true, true, true, false, false);
-    sheet.getRange(bRow, 81).setValue(b.name || 'Bazaar').setBorder(true, true, true, true, false, false);
-    sheet.getRange(bRow, 82).setValue(b.details || '').setBorder(true, true, true, true, false, false);
-    sheet.getRange(bRow, 83).setValue(Number(b.amount) || 0).setNumberFormat('0.00').setBorder(true, true, true, true, false, false);
+    sheet.getRange(bRow, bazDateCol).setValue(new Date(b.date)).setNumberFormat('dd-MMM-yyyy').setBorder(true, true, true, true, false, false);
+    sheet.getRange(bRow, bazNameCol).setValue(b.name || 'Bazaar').setBorder(true, true, true, true, false, false);
+    sheet.getRange(bRow, bazDetailsCol).setValue(b.details || '').setBorder(true, true, true, true, false, false);
+    sheet.getRange(bRow, bazCostCol).setValue(Number(b.amount) || 0).setNumberFormat('0.00').setBorder(true, true, true, true, false, false);
     bRow++;
   }
 }
