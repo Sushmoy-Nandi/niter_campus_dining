@@ -37,6 +37,10 @@ export async function GET(req: NextRequest) {
       periodEnd.setUTCHours(23, 59, 59, 999)
     }
 
+    // Adjust to BDT timezone boundaries (UTC+6) for physical transaction timestamps
+    const queryStart = new Date(periodStart.getTime() - 6 * 60 * 60 * 1000)
+    const queryEnd = new Date(periodEnd.getTime() + 18 * 60 * 60 * 1000 - 1)
+
     const periodDepositMap = await getStudentPeriodDeposits(activePeriod);
 
     const students = await prisma.student.findMany({
@@ -56,18 +60,18 @@ export async function GET(req: NextRequest) {
     ] = await Promise.all([
       prisma.transaction.aggregate({
         _sum: { amount: true },
-        where: { type: "DEPOSIT", createdAt: { gte: periodStart, lte: periodEnd } },
+        where: { type: "DEPOSIT", createdAt: { gte: queryStart, lte: queryEnd } },
       }),
       prisma.transaction.aggregate({
         _sum: { amount: true },
-        where: { type: "REFUND", createdAt: { gte: periodStart, lte: periodEnd } },
+        where: { type: "REFUND", createdAt: { gte: queryStart, lte: queryEnd } },
       }),
       prisma.bazaar.aggregate({
         _sum: { amount: true },
         where: { date: { gte: periodStart, lte: periodEnd } },
       }),
       prisma.transaction.findMany({
-        where: { createdAt: { gte: periodStart, lte: periodEnd } },
+        where: { createdAt: { gte: queryStart, lte: queryEnd } },
         orderBy: { createdAt: "desc" },
         take: 10,
         include: { student: { select: { name: true, studentId: true } } },

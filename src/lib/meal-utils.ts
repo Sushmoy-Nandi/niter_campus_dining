@@ -83,12 +83,14 @@ export function formatCurrency(amount: number): string {
 
 export async function getStudentPeriodDeposits(activePeriod: any) {
   if (!activePeriod) return new Map<string, number>();
+  const start = new Date(new Date(activePeriod.startDate).getTime() - 6 * 60 * 60 * 1000)
+  const end = new Date(new Date(activePeriod.endDate).getTime() + 18 * 60 * 60 * 1000 - 1)
   const deposits = await prisma.transaction.groupBy({
     by: ['studentId'],
     _sum: { amount: true },
     where: {
       type: "DEPOSIT",
-      createdAt: { gte: activePeriod.startDate, lte: periodEndInclusive(activePeriod.endDate) }
+      createdAt: { gte: start, lte: end }
     }
   });
   const map = new Map<string, number>();
@@ -108,12 +110,14 @@ export async function getStudentPeriodDeposits(activePeriod: any) {
  */
 export async function getStudentPeriodDeposit(studentId: string, activePeriod: any): Promise<number> {
   if (!activePeriod) return 0;
+  const start = new Date(new Date(activePeriod.startDate).getTime() - 6 * 60 * 60 * 1000)
+  const end = new Date(new Date(activePeriod.endDate).getTime() + 18 * 60 * 60 * 1000 - 1)
   const deposits = await prisma.transaction.aggregate({
     _sum: { amount: true },
     where: {
       studentId,
       type: "DEPOSIT",
-      createdAt: { gte: activePeriod.startDate, lte: periodEndInclusive(activePeriod.endDate) }
+      createdAt: { gte: start, lte: end }
     }
   });
   return deposits._sum.amount || 0;
