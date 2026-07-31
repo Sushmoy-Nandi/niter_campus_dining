@@ -94,7 +94,12 @@ function ScanHandler() {
         </p>
       )}
 
-      <div className="mt-8 bg-white/20 backdrop-blur-md p-8 rounded-2xl w-full max-w-md shadow-inner">
+      {/* Massive Date Display */}
+      <div className="mt-4 text-5xl md:text-7xl font-black text-white/90 drop-shadow-lg tracking-wide">
+        {new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+      </div>
+
+      <div className="mt-6 bg-white/20 backdrop-blur-md p-8 rounded-2xl w-full max-w-md shadow-inner">
         {result?.student?.photo ? (
           <img 
             src={result.student.photo} 
