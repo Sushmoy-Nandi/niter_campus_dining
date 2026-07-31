@@ -281,29 +281,7 @@ export default function AdminReports() {
         </Card>
       </div>
 
-      <Card className="bg-primary/5 border-primary/20">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Star className="h-5 w-5 text-yellow-500" />
-            Live Pixel-Perfect Google Sheets Sync
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            You can keep a live, automatically updating version of the Master Sheet in Google Sheets that maintains exact colors, formulas, and formatting!
-          </p>
-          <ol className="list-decimal pl-5 text-sm space-y-1 mb-4">
-            <li>Open a blank Google Spreadsheet</li>
-            <li>Click on <strong>Extensions &gt; Apps Script</strong></li>
-            <li>Delete the default code and paste our custom synchronization script (click button below).</li>
-            <li>Update the <code className="bg-muted px-1 rounded">API_URL</code> inside the script to point to your live website URL.</li>
-            <li>Save and run the <code className="bg-muted px-1 rounded">onOpen</code> function. A new <strong>Campus Dining Sync</strong> menu will appear in your Google Sheet!</li>
-          </ol>
-          <Button variant="secondary" onClick={() => window.open('/GoogleSheetsAppScript.txt', '_blank')}>
-            View / Download Apps Script Code
-          </Button>
-        </CardContent>
-      </Card>
+
 
       <Card>
         <CardHeader>
