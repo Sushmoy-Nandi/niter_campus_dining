@@ -19,9 +19,10 @@ export async function POST(req: Request) {
     // Shared, fail-closed secret (AUTH_SECRET → NEXTAUTH_SECRET, else throws).
     const secret = getQrTokenSecret()
 
-    // Create a secure token that expires at the end of the specified day
-    // Or just make it expire in 24 hours.
-    const token = jwt.sign({ date, mealType }, secret, { expiresIn: '24h' })
+    // Create a secure token. We do not use expiresIn because the check-in route 
+    // strictly validates that the 'date' (YYYY-MM-DD) perfectly matches today's date.
+    // This allows admins to generate QR codes days in advance without them breaking.
+    const token = jwt.sign({ date, mealType }, secret)
 
     return NextResponse.json({ token })
   } catch (error) {
