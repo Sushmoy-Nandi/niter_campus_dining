@@ -63,12 +63,24 @@ export async function GET(req: NextRequest) {
     const today = new Date(Date.UTC(bdtNow.getFullYear(), bdtNow.getMonth(), bdtNow.getDate()))
     const { autoOff, reason } = isStudentAutoOff(balance, activePeriod, today, periodDeposit)
 
+    // Calculate daily suspensions for the requested range to match Google Sheets projection
+    const suspendedDates: string[] = []
+    const iter = new Date(startDate)
+    while (iter <= endDate) {
+      const { autoOff: dayAutoOff } = isStudentAutoOff(balance, activePeriod, iter, periodDeposit)
+      if (dayAutoOff) {
+        suspendedDates.push(iter.toISOString().split("T")[0])
+      }
+      iter.setUTCDate(iter.getUTCDate() + 1)
+    }
+
     return NextResponse.json({ 
       schedules, 
       rates, 
       balance,
       autoOff,
-      autoOffReason: reason
+      autoOffReason: reason,
+      suspendedDates
     })
   } catch (error) {
     console.error("Meals error:", error)

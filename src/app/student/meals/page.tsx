@@ -19,6 +19,7 @@ export default function StudentMeals() {
   const [balance, setBalance] = useState<number>(0)
   const [autoOff, setAutoOff] = useState<boolean>(false)
   const [autoOffReason, setAutoOffReason] = useState<string>("")
+  const [suspendedDates, setSuspendedDates] = useState<string[]>([])
 
   const fetchPeriods = useCallback(async () => {
     try {
@@ -60,6 +61,7 @@ export default function StudentMeals() {
         setBalance(data.balance || 0)
         setAutoOff(data.autoOff || false)
         setAutoOffReason(data.autoOffReason || "")
+        setSuspendedDates(data.suspendedDates || [])
       }
 
       // Fetch rate
@@ -242,14 +244,18 @@ export default function StudentMeals() {
             </div>
             {dates.map(({ date, day, isPast, isToday, canEdit }) => {
               const schedule = getScheduleForDate(date)
-              const lunch = schedule?.lunch ?? true
-              const dinner = schedule?.dinner ?? true
+              const isSuspended = suspendedDates.includes(date)
+              
+              // If suspended, the meal is forced OFF (just like Google Sheets renders 0)
+              const lunch = isSuspended ? false : (schedule?.lunch ?? true)
+              const dinner = isSuspended ? false : (schedule?.dinner ?? true)
+              
               return (
                 <div
                   key={date}
                   className={`grid grid-cols-4 gap-2 rounded-md border p-2 text-sm items-center ${
                     isToday ? "border-primary bg-primary/5" : ""
-                  }`}
+                  } ${isSuspended ? "bg-red-50/30 border-red-200" : ""}`}
                 >
                   <div>
                     <span className="font-medium">{day}</span>
@@ -261,23 +267,21 @@ export default function StudentMeals() {
                     <Switch
                       checked={lunch}
                       onCheckedChange={(v) => handleToggle(date, "lunch", v)}
-                      disabled={!canEdit || autoOff}
+                      disabled={!canEdit || isSuspended}
                     />
                   </div>
                   <div className="flex justify-center">
                     <Switch
                       checked={dinner}
                       onCheckedChange={(v) => handleToggle(date, "dinner", v)}
-                      disabled={!canEdit || autoOff}
+                      disabled={!canEdit || isSuspended}
                     />
                   </div>
                   <div className="text-center">
-                    {canEdit ? (
-                      autoOff ? (
-                        <span className="text-xs text-red-600">Locked</span>
-                      ) : (
-                        <span className="text-xs text-green-600">Editable</span>
-                      )
+                    {isSuspended ? (
+                      <span className="text-xs font-semibold text-red-600">Suspended</span>
+                    ) : canEdit ? (
+                      <span className="text-xs text-green-600">Editable</span>
                     ) : (
                       <span className="text-xs text-muted-foreground">Locked</span>
                     )}
