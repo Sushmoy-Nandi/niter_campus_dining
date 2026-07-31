@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
       where: { userId: session.user.id },
       include: {
         wallet: true,
+        user: { select: { image: true } },
         _count: { select: { transactions: true, mealSchedules: true } },
       },
     })

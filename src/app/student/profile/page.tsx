@@ -4,8 +4,8 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { User, Mail, GraduationCap, Calendar, Wallet, Activity, Hash, Phone, Edit2 } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { User, Mail, GraduationCap, Calendar, Wallet, Activity, Hash, Phone, Edit2, Camera, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -82,6 +82,90 @@ export default function StudentProfile() {
     }
   }
 
+  const uploadImage = async (imageBase64: string) => {
+    const loadingToast = toast.loading("Uploading image...")
+    try {
+      const res = await fetch("/api/student/profile/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64 })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success("Profile picture updated!", { id: loadingToast })
+        setStudent((prev: any) => ({
+          ...prev,
+          user: { ...prev.user, image: data.image }
+        }))
+      } else {
+        toast.error(data.error || "Failed to upload image", { id: loadingToast })
+      }
+    } catch (err) {
+      toast.error("Error uploading image", { id: loadingToast })
+    }
+  }
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.match(/image\/(png|jpeg|webp)/)) {
+      toast.error("Please upload a PNG, JPEG, or WEBP image.")
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File is too large. Max allowed original size is 5MB.")
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        const MAX_WIDTH = 300
+        const MAX_HEIGHT = 300
+        let width = img.width
+        let height = img.height
+
+        const size = Math.min(width, height)
+        const sourceX = (width - size) / 2
+        const sourceY = (height - size) / 2
+
+        canvas.width = MAX_WIDTH
+        canvas.height = MAX_HEIGHT
+
+        const ctx = canvas.getContext("2d")
+        if (ctx) {
+          ctx.drawImage(img, sourceX, sourceY, size, size, 0, 0, MAX_WIDTH, MAX_HEIGHT)
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.85)
+          uploadImage(compressedBase64)
+        }
+      }
+      img.src = event.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleImageDelete = async () => {
+    if (!confirm("Are you sure you want to remove your profile picture?")) return
+    try {
+      const res = await fetch("/api/student/profile/image", { method: "DELETE" })
+      if (res.ok) {
+        toast.success("Profile picture removed")
+        setStudent((prev: any) => ({
+          ...prev,
+          user: { ...prev.user, image: null }
+        }))
+      } else {
+        toast.error("Failed to remove image")
+      }
+    } catch (err) {
+      toast.error("Error removing image")
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -149,11 +233,33 @@ export default function StudentProfile() {
         <CardContent className="pt-6">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row md:items-start">
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-              <Avatar className="h-20 w-20">
-                <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <div className="flex flex-col items-center gap-2">
+                <div className="relative group">
+                  <Avatar className="h-20 w-20 border">
+                    {student.user?.image && <AvatarImage src={student.user.image} alt={student.name} className="object-cover" />}
+                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <label className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full cursor-pointer hover:bg-primary/95 transition shadow shadow-black/40">
+                    <Camera className="h-3.5 w-3.5" />
+                    <input 
+                      type="file" 
+                      accept="image/png, image/jpeg, image/webp" 
+                      className="hidden" 
+                      onChange={handleImageUpload} 
+                    />
+                  </label>
+                </div>
+                {student.user?.image && (
+                  <button 
+                    onClick={handleImageDelete} 
+                    className="text-xs text-red-500 hover:text-red-600 hover:underline flex items-center gap-1 font-semibold mt-1"
+                  >
+                    <Trash2 className="h-3 w-3" /> Remove
+                  </button>
+                )}
+              </div>
               <div className="space-y-1 text-center sm:text-left">
                 <h2 className="text-xl font-bold mb-2">{student.name}</h2>
                 <div className="flex flex-wrap justify-center sm:justify-start gap-4">

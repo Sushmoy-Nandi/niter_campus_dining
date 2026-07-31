@@ -53,12 +53,12 @@ export async function POST(req: NextRequest) {
     if (studentId) {
       student = await prisma.student.findUnique({
         where: { id: studentId },
-        include: { wallet: true },
+        include: { wallet: true, user: { select: { image: true } } },
       })
     } else if (diningId) {
       student = await prisma.student.findFirst({
         where: { diningId: { equals: diningId, mode: "insensitive" } },
-        include: { wallet: true },
+        include: { wallet: true, user: { select: { image: true } } },
       })
     }
 
@@ -150,7 +150,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       message: "Check-in Successful!",
-      student: { name: student.name, diningId: student.diningId, currentMeal } 
+      student: { 
+        name: student.name, 
+        diningId: student.diningId, 
+        currentMeal,
+        photo: student.user?.image
+      } 
     }, { status: 200 })
 
   } catch (error) {

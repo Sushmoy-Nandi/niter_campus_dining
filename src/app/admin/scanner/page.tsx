@@ -13,7 +13,8 @@ export default function AdminScanner() {
     status: "success" | "error" | "idle" | "processing",
     message?: string,
     studentName?: string,
-    meal?: string
+    meal?: string,
+    photo?: string
   }>({ status: "idle" })
   const [isScanning, setIsScanning] = useState(false)
   const [manualId, setManualId] = useState("")
@@ -40,7 +41,8 @@ export default function AdminScanner() {
           status: "success", 
           message: resData.message,
           studentName: resData.student?.name,
-          meal: resData.student?.currentMeal
+          meal: resData.student?.currentMeal,
+          photo: resData.student?.photo
         })
       } else {
         setScanResult({ status: "error", message: resData.error || "Unknown error" })
@@ -145,13 +147,32 @@ export default function AdminScanner() {
             )}
 
             {scanResult.status === "success" && (
-              <Alert className="bg-green-50 border-green-200">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-800">Verified!</AlertTitle>
-                <AlertDescription className="text-green-700 font-medium">
-                  {scanResult.studentName} is authorized for {scanResult.meal}.
-                </AlertDescription>
-              </Alert>
+              <div className="space-y-4">
+                <Alert className="bg-green-50 border-green-200">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <AlertTitle className="text-green-800 font-bold">Verified!</AlertTitle>
+                  <AlertDescription className="text-green-700 font-semibold uppercase tracking-wider">
+                    Authorized for {scanResult.meal}
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center gap-4 p-4 border rounded-xl bg-card shadow-sm">
+                  {scanResult.photo ? (
+                    <img 
+                      src={scanResult.photo} 
+                      alt="Student Photo" 
+                      className="w-24 h-24 rounded-lg object-cover border-2 border-green-500 shadow-md"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center text-muted-foreground border-2 border-dashed font-semibold text-xs text-center p-2">
+                      No Photo Uploaded
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="text-lg font-bold">{scanResult.studentName}</h3>
+                    <p className="text-sm text-muted-foreground">Authorized check-in successful.</p>
+                  </div>
+                </div>
+              </div>
             )}
 
             {scanResult.status === "error" && (
