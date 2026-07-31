@@ -56,12 +56,15 @@ export async function GET(req: Request) {
       // Deposits attributed to this period. The rollover-in from the previous settlement
       // is timestamped at this period's start, so it is (correctly) counted here as the
       // carried-forward opening balance; the rollover-OUT lands in the next period.
+      const start = new Date(new Date(period.startDate).getTime() - 6 * 60 * 60 * 1000)
+      const end = new Date(new Date(period.endDate).getTime() + 18 * 60 * 60 * 1000 - 1)
+
       const depositAgg = await prisma.transaction.aggregate({
         _sum: { amount: true },
         where: {
           studentId: student.id,
           type: "DEPOSIT",
-          createdAt: { gte: period.startDate, lte: periodEnd }
+          createdAt: { gte: start, lte: end }
         }
       })
       const totalDeposit = depositAgg._sum.amount || 0
