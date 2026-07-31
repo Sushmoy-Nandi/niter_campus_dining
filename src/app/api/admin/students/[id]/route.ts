@@ -184,18 +184,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
       const tempD = new Date(activePeriod.startDate)
       const tempEnd = periodEndInclusive(activePeriod.endDate)
+      const periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod)
 
       while (tempD <= tempEnd) {
         const ds = toUTCDateKey(tempD)
+        const { autoOff } = isStudentAutoOff(balance, activePeriod, tempD, periodDeposit)
+        
         if (schedMap.has(ds)) {
-          allSchedules.push(schedMap.get(ds))
+          const s = schedMap.get(ds)
+          allSchedules.push({
+            ...s,
+            lunch: autoOff ? false : s.lunch,
+            dinner: autoOff ? false : s.dinner,
+            isSuspended: autoOff
+          })
         } else {
           allSchedules.push({
             id: `default-${ds}`,
             date: tempD.toISOString(),
-            lunch: true,
-            dinner: true,
-            isDefault: true // Just a flag
+            lunch: autoOff ? false : true,
+            dinner: autoOff ? false : true,
+            isDefault: true,
+            isSuspended: autoOff
           })
         }
         tempD.setUTCDate(tempD.getUTCDate() + 1)

@@ -162,13 +162,23 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
                   </TableHeader>
                   <TableBody>
                     {student.mealSchedules.map((meal: any) => (
-                      <TableRow key={meal.id}>
-                        <TableCell>{new Date(meal.date).toLocaleDateString()}</TableCell>
+                      <TableRow key={meal.id} className={meal.isSuspended ? "bg-red-50/30" : ""}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span>{new Date(meal.date).toLocaleDateString()}</span>
+                            {meal.isSuspended && (
+                              <Badge variant="destructive" className="text-[9px] px-1.5 py-0 h-4 bg-red-100 text-red-700 hover:bg-red-100 border-none font-bold">
+                                Suspended
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Button 
                             variant={meal.lunch ? "default" : "outline"}
                             size="sm"
                             className="h-7 px-3 text-xs"
+                            disabled={meal.isSuspended}
                             onClick={() => toggleMeal(meal.date, "lunch", meal.lunch)}
                           >
                             {meal.lunch ? "ON" : "OFF"}
@@ -179,6 +189,7 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
                             variant={meal.dinner ? "default" : "outline"}
                             size="sm"
                             className="h-7 px-3 text-xs"
+                            disabled={meal.isSuspended}
                             onClick={() => toggleMeal(meal.date, "dinner", meal.dinner)}
                           >
                             {meal.dinner ? "ON" : "OFF"}
