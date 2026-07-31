@@ -14,6 +14,16 @@ function ScanHandler() {
   const [error, setError] = useState<string>("")
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
 
+  // Security: Auto-redirect after 50 seconds
+  useEffect(() => {
+    if (!loading) {
+      const redirectTimer = setTimeout(() => {
+        router.push('/student/dashboard')
+      }, 50000)
+      return () => clearTimeout(redirectTimer)
+    }
+  }, [loading, router])
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(timer)
