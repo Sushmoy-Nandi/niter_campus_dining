@@ -148,6 +148,9 @@ export async function GET(req: NextRequest) {
     const totalRefunds = monthRefunds._sum.amount || 0
     const totalBazaarCost = bazaarCost._sum.amount || 0
 
+    // Sum of all active student wallet balances is the true outstanding liability/balance
+    const outstandingBalance = students.reduce((acc, s) => acc + (s.wallet?.balance || 0), 0)
+
     const feedbackStats = {
       total: allFeedback.length,
       average: allFeedback.length > 0 ? (allFeedback.reduce((acc, f) => acc + f.rating, 0) / allFeedback.length).toFixed(1) : 0,
@@ -166,7 +169,7 @@ export async function GET(req: NextRequest) {
         totalRefunds,
         totalDeposits,
         totalMealCost: totalBazaarCost,
-        outstandingBalance: totalDeposits - totalRefunds - totalBazaarCost,
+        outstandingBalance,
         todayMeals: { lunch: todayLunch, dinner: todayDinner },
       },
       charts: {
@@ -180,6 +183,10 @@ export async function GET(req: NextRequest) {
       recentTransactions,
       recentFeedback,
       feedbackStats,
+    }, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
     })
   } catch (error) {
     console.error("Admin dashboard error:", error)
