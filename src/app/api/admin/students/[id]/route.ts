@@ -192,11 +192,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         
         if (schedMap.has(ds)) {
           const s = schedMap.get(ds)
+          const isSuspended = autoOff && !s.adminOverride
           allSchedules.push({
             ...s,
-            lunch: autoOff ? false : s.lunch,
-            dinner: autoOff ? false : s.dinner,
-            isSuspended: autoOff
+            lunch: isSuspended ? false : s.lunch,
+            dinner: isSuspended ? false : s.dinner,
+            isSuspended
           })
         } else {
           allSchedules.push({

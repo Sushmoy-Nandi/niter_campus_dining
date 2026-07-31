@@ -178,7 +178,6 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
                             variant={meal.lunch ? "default" : "outline"}
                             size="sm"
                             className="h-7 px-3 text-xs"
-                            disabled={meal.isSuspended}
                             onClick={() => toggleMeal(meal.date, "lunch", meal.lunch)}
                           >
                             {meal.lunch ? "ON" : "OFF"}
@@ -189,7 +188,6 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
                             variant={meal.dinner ? "default" : "outline"}
                             size="sm"
                             className="h-7 px-3 text-xs"
-                            disabled={meal.isSuspended}
                             onClick={() => toggleMeal(meal.date, "dinner", meal.dinner)}
                           >
                             {meal.dinner ? "ON" : "OFF"}

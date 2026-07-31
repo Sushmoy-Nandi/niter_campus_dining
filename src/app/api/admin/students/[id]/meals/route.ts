@@ -28,12 +28,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       update: {
         lunch: lunch ?? true,
         dinner: dinner ?? true,
+        adminOverride: true,
       },
       create: {
         studentId: id,
         date: mealDate,
         lunch: lunch ?? true,
         dinner: dinner ?? true,
+        adminOverride: true,
       },
     })
 

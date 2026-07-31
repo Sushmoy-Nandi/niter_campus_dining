@@ -148,12 +148,12 @@ model MealRate {
 }
 
 model MealSchedule {
-  id          String   @id @default(cuid())
-  studentId   String
-  date        DateTime
-  lunch       Boolean  @default(false)
-  dinner      Boolean  @default(false)
-  // Removed guest meal fields
+  id            String   @id @default(cuid())
+  studentId     String
+  date          DateTime
+  lunch         Boolean  @default(false)
+  dinner        Boolean  @default(false)
+  adminOverride Boolean  @default(false)
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 

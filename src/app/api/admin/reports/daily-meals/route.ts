@@ -117,17 +117,15 @@ export async function GET(req: Request) {
       const balance = student.wallet?.balance || 0;
       let autoOff = false; // Just to reflect current status for the UI
 
-      const iterDate = new Date(startOfDay);
+       const iterDate = new Date(startOfDay);
       while (iterDate <= endOfDay) {
         const { autoOff: dayAutoOff } = isStudentAutoOff(balance, activePeriod, iterDate, periodDeposit);
-        // The last loop pass is the end-of-range day, so this leaves `autoOff`
-        // holding that day's status. (The old `=== endOfDay` check never matched:
-        // iterDate is at 00:00:00 while endOfDay is 23:59:59.999.)
-        autoOff = dayAutoOff;
+        const s = dayScheduleMap.get(toUTCDateKey(iterDate));
+        const isSuspended = dayAutoOff && !(s && s.adminOverride);
+        
+        autoOff = isSuspended;
 
-        if (!dayAutoOff) {
-          const s = dayScheduleMap.get(toUTCDateKey(iterDate));
-
+        if (!isSuspended) {
           if (s) {
             if (s.lunch) lunch++;
             if (s.dinner) dinner++;

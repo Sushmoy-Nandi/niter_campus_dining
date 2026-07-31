@@ -73,8 +73,10 @@ export async function GET(req: NextRequest) {
     const iterDate = new Date(periodStart);
     while (iterDate <= periodEnd) {
       const { autoOff: dayAutoOff } = isStudentAutoOff(balance, activePeriod, iterDate, periodDeposit);
-      if (!dayAutoOff) {
-        const s = scheduleMap.get(toUTCDateKey(iterDate));
+      const s = scheduleMap.get(toUTCDateKey(iterDate));
+      const isSuspended = dayAutoOff && !(s && s.adminOverride);
+      
+      if (!isSuspended) {
         if (s) {
           if (s.lunch) monthlyMealCount++;
           if (s.dinner) monthlyMealCount++;

@@ -78,15 +78,7 @@ export async function POST(req: NextRequest) {
       periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
     }
 
-    const balance = student.wallet?.balance || 0;
-    const { autoOff, reason: offReason } = isStudentAutoOff(balance, activePeriod, bdtDate, periodDeposit);
-
-    if (autoOff) {
-      await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_AUTO_OFF`, details: offReason }})
-      return NextResponse.json({ error: `Meal auto-disabled: ${offReason}` }, { status: 403 })
-    }
-
-    // Find the schedule for today
+    // Find the schedule for today first
     const schedules = await prisma.mealSchedule.findMany({
       where: { studentId: student.id }
     })
@@ -95,6 +87,16 @@ export async function POST(req: NextRequest) {
        const dStr = s.date.toISOString().split("T")[0]
        return dStr === todayStr
     })
+
+    const balance = student.wallet?.balance || 0;
+    const { autoOff, reason: offReason } = isStudentAutoOff(balance, activePeriod, bdtDate, periodDeposit);
+
+    const isSuspended = autoOff && !(schedule && schedule.adminOverride);
+
+    if (isSuspended) {
+      await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_AUTO_OFF`, details: offReason }})
+      return NextResponse.json({ error: `Meal auto-disabled: ${offReason}` }, { status: 403 })
+    }
 
     // If no schedule exists, meals are ON by default.
     // If it exists, we check if the specific meal is turned OFF.

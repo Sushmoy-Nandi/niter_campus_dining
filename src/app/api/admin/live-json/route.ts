@@ -113,12 +113,15 @@ export async function GET(req: Request) {
         
         daysList.forEach(dayIso => {
           const d = new Date(dayIso);
+          const dStr = dayIso.split('T')[0];
+          const s = scheduleMap.get(dStr)?.get(student.id);
+
           const { autoOff } = isStudentAutoOff(balance, activePeriod, d, sumDeps);
-          if (autoOff) {
+          const isSuspended = autoOff && !(s && s.adminOverride);
+
+          if (isSuspended) {
             meals.push({ l: 0, d: 0 });
           } else {
-            const dStr = dayIso.split('T')[0];
-            const s = scheduleMap.get(dStr)?.get(student.id);
             const l = s ? (s.lunch ? 1 : 0) : 1;
             const din = s ? (s.dinner ? 1 : 0) : 1;
             meals.push({ l, d: din });

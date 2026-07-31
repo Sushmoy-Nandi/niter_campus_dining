@@ -105,13 +105,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No active dining period" }, { status: 400 })
     }
 
+    // Fetch custom schedule first
+    const schedules = await prisma.mealSchedule.findMany({
+      where: { studentId: student.id }
+    })
+    
+    const schedule = schedules.find(s => {
+       const dStr = s.date.toISOString().split("T")[0]
+       return dStr === todayStr
+    })
+
     // 5. Calculate if student is Auto-Off
     const periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
-
     const balance = student.wallet?.balance || 0;
     const { autoOff, reason: offReason } = isStudentAutoOff(balance, activePeriod, bdtDate, periodDeposit);
 
-    if (autoOff) {
+    const isSuspended = autoOff && !(schedule && schedule.adminOverride);
+
+    if (isSuspended) {
       await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_AUTO_OFF`, details: offReason }})
       await triggerGoogleSheetAppend({
         time: bdtString,
@@ -124,16 +135,6 @@ export async function POST(req: Request) {
       });
       return NextResponse.json({ error: `Meal auto-disabled: ${offReason}` }, { status: 403 })
     }
-    
-    // 6. Check custom schedule
-    const schedules = await prisma.mealSchedule.findMany({
-      where: { studentId: student.id }
-    })
-    
-    const schedule = schedules.find(s => {
-       const dStr = s.date.toISOString().split("T")[0]
-       return dStr === todayStr
-    })
 
     if (schedule) {
       if (currentMeal === "LUNCH" && !schedule.lunch) {
