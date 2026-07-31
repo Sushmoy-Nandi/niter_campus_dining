@@ -263,6 +263,7 @@ function buildSheetWithData(data) {
     // Strict Number Formats to avoid Date Auto-formatting
     sheet.getRange(3, 3, data.students.length, 4).setNumberFormat('0.00'); // C, D, E, F
     sheet.getRange(3, 8, data.students.length, 4).setNumberFormat('0.00'); // H, I, J, K
+    sheet.getRange(3, DATE_START_COL, data.students.length + 1, numDays * 2).setNumberFormat('0'); // Force daily count columns to be integers, preventing date auto-formatting
   }
   
   const lastBazRow = Math.max(3, 2 + data.bazaars.length);
