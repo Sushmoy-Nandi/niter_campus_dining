@@ -2,7 +2,8 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import jwt from "jsonwebtoken"
-import { isStudentAutoOff } from "@/lib/meal-utils"
+import { isStudentAutoOff, getStudentPeriodDeposit } from "@/lib/meal-utils"
+import { getQrTokenSecret } from "@/lib/secrets"
 
 // A custom webhook caller just for appending logs to the Google Sheet
 async function triggerGoogleSheetAppend(logData: any) {
@@ -35,8 +36,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing QR token" }, { status: 400 })
     }
 
-    // 1. Verify token
-    const secret = process.env.AUTH_SECRET || "fallback_secret_for_dev_only"
+    // 1. Verify token (same fail-closed secret the generator signs with).
+    const secret = getQrTokenSecret()
     let decoded: any;
     try {
       decoded = jwt.verify(token, secret)
@@ -105,16 +106,7 @@ export async function POST(req: Request) {
     }
 
     // 5. Calculate if student is Auto-Off
-    let periodDeposit = 0;
-    const deposits = await prisma.transaction.aggregate({
-      _sum: { amount: true },
-      where: { 
-        studentId: student.id, 
-        type: "DEPOSIT",
-        createdAt: { gte: activePeriod.startDate, lte: activePeriod.endDate }
-      }
-    });
-    periodDeposit = deposits._sum.amount || 0;
+    const periodDeposit = await getStudentPeriodDeposit(student.id, activePeriod);
 
     const balance = student.wallet?.balance || 0;
     const { autoOff, reason: offReason } = isStudentAutoOff(balance, activePeriod, bdtDate, periodDeposit);
@@ -127,7 +119,7 @@ export async function POST(req: Request) {
         diningId: student.diningId,
         department: student.department,
         meal: currentMeal,
-        status: "DENIED",
+        status: "AUTO-OFF",
         reason: offReason
       });
       return NextResponse.json({ error: `Meal auto-disabled: ${offReason}` }, { status: 403 })
@@ -146,13 +138,13 @@ export async function POST(req: Request) {
     if (schedule) {
       if (currentMeal === "LUNCH" && !schedule.lunch) {
         await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_LUNCH_${todayStr}`, details: `Lunch is turned OFF` }})
-        await triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Lunch is OFF today" });
+        await triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "FAILED", reason: "Lunch is turned OFF for today" });
         return NextResponse.json({ error: "Lunch is turned OFF for today" }, { status: 403 })
       }
       
       if (currentMeal === "DINNER" && !schedule.dinner) {
         await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_DINNER_${todayStr}`, details: `Dinner is turned OFF` }})
-        await triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Dinner is OFF today" });
+        await triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "FAILED", reason: "Dinner is turned OFF for today" });
         return NextResponse.json({ error: "Dinner is turned OFF for today" }, { status: 403 })
       }
     }
@@ -182,7 +174,7 @@ export async function POST(req: Request) {
           details: detailsMsg 
         }
       })
-      await triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DENIED", reason: "Already Scanned" });
+      await triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal, status: "DOUBLE SCAN", reason: detailsMsg });
       return NextResponse.json({ error: `Student already checked in for ${currentMeal.toLowerCase()} at ${scanTime}!` }, { status: 409 })
     }
 
@@ -201,8 +193,8 @@ export async function POST(req: Request) {
       diningId: student.diningId,
       department: student.department,
       meal: currentMeal,
-      status: "AUTHORIZED",
-      reason: ""
+      status: "SUCCESS",
+      reason: `Checked in for ${currentMeal.toLowerCase()}`
     });
 
     return NextResponse.json({
