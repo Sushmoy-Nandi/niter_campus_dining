@@ -93,12 +93,12 @@ export default function StudentDashboard() {
     return () => clearInterval(interval)
   }, [])
 
-  async function handleVote(pollId: string, pollOptionId: string) {
+  async function handleVote(pollId: string, optionId: string) {
     try {
       const res = await fetch("/api/student/polls", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pollId, pollOptionId })
+        body: JSON.stringify({ pollId, optionId })
       })
       if (res.ok) {
         toast.success("Vote recorded!")

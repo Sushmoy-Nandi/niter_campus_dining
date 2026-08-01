@@ -55,7 +55,8 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { pollId, optionId } = body
+    const { pollId, optionId: rawOptionId, pollOptionId } = body
+    const optionId = rawOptionId || pollOptionId
 
     if (!pollId || !optionId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
