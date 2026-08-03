@@ -22,8 +22,7 @@ import QRCode from "react-qr-code"
 export default function StudentProfile() {
   const [student, setStudent] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  
-  // Edit states
+
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editName, setEditName] = useState("")
   const [editDepartment, setEditDepartment] = useState("")
@@ -34,7 +33,7 @@ export default function StudentProfile() {
   useEffect(() => {
     fetchProfile()
   }, [])
-  
+
   const fetchProfile = () => {
     fetch("/api/student/profile")
       .then((res) => res.json())
@@ -53,7 +52,7 @@ export default function StudentProfile() {
       toast.error("Name, Department, and Session are required.")
       return
     }
-    
+
     setIsSaving(true)
     try {
       const res = await fetch("/api/student/profile", {
@@ -66,7 +65,7 @@ export default function StudentProfile() {
           whatsapp: editWhatsapp,
         })
       })
-      
+
       const data = await res.json()
       if (res.ok) {
         toast.success("Profile updated successfully!")
@@ -126,8 +125,8 @@ export default function StudentProfile() {
         const canvas = document.createElement("canvas")
         const MAX_WIDTH = 300
         const MAX_HEIGHT = 300
-        let width = img.width
-        let height = img.height
+        const width = img.width
+        const height = img.height
 
         const size = Math.min(width, height)
         const sourceX = (width - size) / 2
@@ -186,7 +185,26 @@ export default function StudentProfile() {
   const qrPayload = JSON.stringify({
     studentId: student.id,
     type: "MEAL_CHECKIN"
-  });
+  })
+
+  const detailItems = [
+    { icon: Mail, label: "Email", value: student.email },
+    { icon: Phone, label: "WhatsApp", value: student.whatsapp || "Not provided" },
+    { icon: GraduationCap, label: "Department", value: student.department },
+    { icon: Calendar, label: "Session", value: student.session },
+    {
+      icon: Wallet,
+      label: "Balance",
+      value: `${student.wallet?.balance?.toFixed(2) || "0.00"} BDT`,
+      strong: true,
+    },
+    {
+      icon: Activity,
+      label: "Status",
+      value: student.isActive ? "Active" : "Inactive",
+      badge: true,
+    },
+  ]
 
   return (
     <div className="space-y-6">
@@ -195,9 +213,11 @@ export default function StudentProfile() {
           <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
           <p className="text-muted-foreground">Your account information</p>
         </div>
-        
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground h-8 px-3 gap-2">
+          <DialogTrigger
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
+          >
             <Edit2 className="h-4 w-4" /> Edit Profile
           </DialogTrigger>
           <DialogContent>
@@ -229,155 +249,124 @@ export default function StudentProfile() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center justify-between gap-6 md:flex-row md:items-start">
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-              <div className="flex flex-col items-center gap-2">
-                <div className="relative group">
-                  <Avatar className="h-20 w-20 border">
-                    {student.user?.image && <AvatarImage src={student.user.image} alt={student.name} className="object-cover" />}
-                    <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <label className="absolute bottom-0 right-0 p-1.5 bg-primary text-primary-foreground rounded-full cursor-pointer hover:bg-primary/95 transition shadow shadow-black/40">
-                    <Camera className="h-3.5 w-3.5" />
-                    <input 
-                      type="file" 
-                      accept="image/png, image/jpeg, image/webp" 
-                      className="hidden" 
-                      onChange={handleImageUpload} 
-                    />
-                  </label>
-                </div>
-                {student.user?.image && (
-                  <button 
-                    onClick={handleImageDelete} 
-                    className="text-xs text-red-500 hover:text-red-600 hover:underline flex items-center gap-1 font-semibold mt-1"
-                  >
-                    <Trash2 className="h-3 w-3" /> Remove
-                  </button>
-                )}
+      {/* Profile hero card */}
+      <div className="relative overflow-hidden rounded-2xl border bg-card p-6 card-shadow sm:p-8">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+          <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
+            <div className="flex flex-col items-center gap-2">
+              <div className="relative group">
+                <Avatar className="h-24 w-24 border-4 border-primary/20 shadow-lg">
+                  {student.user?.image && <AvatarImage src={student.user.image} alt={student.name} className="object-cover" />}
+                  <AvatarFallback className="bg-gradient-to-br from-primary to-teal-600 text-2xl font-bold text-white">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                <label className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-primary p-2 text-primary-foreground shadow-lg transition-transform hover:scale-105">
+                  <Camera className="h-3.5 w-3.5" />
+                  <input
+                    type="file"
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                </label>
               </div>
-              <div className="space-y-1 text-center sm:text-left">
-                <h2 className="text-xl font-bold mb-2">{student.name}</h2>
-                <div className="flex flex-wrap justify-center sm:justify-start gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-sm">
-                      <Hash className="h-4 w-4" /> Student ID
-                    </div>
-                    <p>{student.studentId}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground text-sm">
-                      <Hash className="h-4 w-4" /> Dining ID
-                    </div>
-                    <p>{student.diningId || "Not Assigned"}</p>
-                  </div>
-                </div>
-              </div>
+              {student.user?.image && (
+                <button
+                  onClick={handleImageDelete}
+                  className="flex items-center gap-1 text-xs font-semibold text-red-500 hover:text-red-600 hover:underline"
+                >
+                  <Trash2 className="h-3 w-3" /> Remove
+                </button>
+              )}
             </div>
-            
-            <div className="flex flex-col items-center bg-muted/30 p-4 rounded-xl border border-border/50">
-              <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wider">Digital Dining Pass</p>
-              <div className="bg-white p-2 rounded-lg shadow-sm">
-                <QRCode 
-                  value={qrPayload}
-                  size={120}
-                  level="Q"
-                />
+            <div className="space-y-2 text-center sm:text-left">
+              <h2 className="text-2xl font-extrabold tracking-tight">{student.name}</h2>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <Badge variant="secondary" className="gap-1">
+                  <Hash className="h-3 w-3" /> {student.studentId}
+                </Badge>
+                <Badge variant="outline" className="gap-1">
+                  <User className="h-3 w-3" /> {student.diningId || "No Dining ID"}
+                </Badge>
               </div>
-                <p className="text-[10px] text-muted-foreground mt-2 text-center max-w-[150px]">
-                  Show this QR code to the dining manager to verify your meals.
-                </p>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                {student.department} · Session {student.session}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center rounded-2xl border border-dashed bg-muted/30 p-5">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Digital Dining Pass
+            </p>
+            <div className="rounded-xl bg-white p-2.5 shadow-sm ring-1 ring-border">
+              <QRCode
+                value={qrPayload}
+                size={110}
+                level="Q"
+              />
+            </div>
+            <p className="mt-3 max-w-[160px] text-center text-[11px] text-muted-foreground">
+              Show this QR code to the dining manager to verify your meals.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {detailItems.map((item) => (
+          <Card key={item.label} className="card-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <item.icon className="h-4 w-4" />
+                </span>
+                {item.label}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {item.badge ? (
+                <Badge variant={student.isActive ? "default" : "secondary"}>
+                  {student.isActive ? "Active" : "Inactive"}
+                </Badge>
+              ) : (
+                <p className={item.strong ? "text-lg font-extrabold tabular-nums" : "font-medium"}>{item.value}</p>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card className="card-shadow">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm font-medium">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Activity className="h-4 w-4" />
+            </span>
+            Account Stats
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border bg-muted/20 p-3 text-center">
+              <p className="text-2xl font-extrabold tabular-nums">{student._count?.transactions || 0}</p>
+              <p className="text-xs text-muted-foreground">Total transactions</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3 text-center">
+              <p className="text-2xl font-extrabold tabular-nums">{student._count?.mealSchedules || 0}</p>
+              <p className="text-xs text-muted-foreground">Total meal days</p>
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3 text-center">
+              <p className="text-2xl font-extrabold tabular-nums">
+                {new Date(student.createdAt).toLocaleDateString()}
+              </p>
+              <p className="text-xs text-muted-foreground">Member since</p>
+            </div>
           </div>
         </CardContent>
       </Card>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Mail className="h-4 w-4" /> Email
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{student.email}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Phone className="h-4 w-4" /> WhatsApp
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{student.whatsapp || "Not provided"}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <GraduationCap className="h-4 w-4" /> Department
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{student.department}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Calendar className="h-4 w-4" /> Session
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>{student.session}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Wallet className="h-4 w-4" /> Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="font-bold">{student.wallet?.balance?.toFixed(2) || "0.00"} BDT</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Activity className="h-4 w-4" /> Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Badge variant={student.isActive ? "default" : "secondary"}>
-              {student.isActive ? "Active" : "Inactive"}
-            </Badge>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Stats</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1 text-sm">
-              <p>Total Transactions: {student._count?.transactions || 0}</p>
-              <p>Total Meal Days: {student._count?.mealSchedules || 0}</p>
-              <p>Joined: {new Date(student.createdAt).toLocaleDateString()}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   )
 }

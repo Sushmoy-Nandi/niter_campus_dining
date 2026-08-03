@@ -6,9 +6,12 @@ import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
-import { UtensilsCrossed, Users, AlertTriangle } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { UtensilsCrossed, Users, AlertTriangle, CalendarDays, Info } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { cn } from "@/lib/utils"
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 export default function StudentMeals() {
   const [schedules, setSchedules] = useState<any[]>([])
@@ -27,7 +30,6 @@ export default function StudentMeals() {
       if (res.ok) {
         const data = await res.json()
         setPeriods(data.periods || [])
-        // Set default to active period or first period
         if (data.periods && data.periods.length > 0) {
           const active = data.periods.find((p: any) => p.isActive) || data.periods[0]
           setSelectedPeriodId(active.id)
@@ -50,10 +52,9 @@ export default function StudentMeals() {
       const start = new Date(period.startDate)
       const end = new Date(period.endDate)
 
-      // Fetch meals
       const resMeals = await fetch(`/api/student/meals?startDate=${start.toISOString()}&endDate=${end.toISOString()}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache', 'Expires': '0' }
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0" }
       })
       if (resMeals.ok) {
         const data = await resMeals.json()
@@ -64,10 +65,9 @@ export default function StudentMeals() {
         setSuspendedDates(data.suspendedDates || [])
       }
 
-      // Fetch rate
       const resRate = await fetch(`/api/admin/meal-rate/calculation?periodId=${periodId}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache', 'Expires': '0' }
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache", "Expires": "0" }
       })
       if (resRate.ok) {
         const data = await resRate.json()
@@ -120,7 +120,7 @@ export default function StudentMeals() {
     const data = await res.json()
     if (!res.ok) {
       toast.error(data.error || "Failed to update meal")
-      fetchMealsAndRate(selectedPeriodId) // revert on error
+      fetchMealsAndRate(selectedPeriodId)
       return
     }
     toast.success(`Meal updated for ${date}`)
@@ -147,7 +147,6 @@ export default function StudentMeals() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Loop from start to end date
     const d = new Date(start)
     while (d <= end) {
       const year = d.getFullYear()
@@ -155,15 +154,14 @@ export default function StudentMeals() {
       const day = d.getDate()
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 
-      // Deadline: 10:00 PM BST the day before
       const deadline = new Date(year, month, day - 1, 22, 0, 0, 0)
       const canEdit = now < deadline
-      
+
       const localD = new Date(year, month, day)
       const isPast = localD < today
       const isToday = localD.getTime() === today.getTime()
 
-      dates.push({ date: dateStr, day, isPast, isToday, canEdit })
+      dates.push({ date: dateStr, day, month, year, isPast, isToday, canEdit })
       d.setDate(d.getDate() + 1)
     }
 
@@ -182,117 +180,196 @@ export default function StudentMeals() {
   }
 
   const selectedPeriod = periods.find(p => p.id === selectedPeriodId)
+  const activeMealCount = dates.filter(({ date, isPast }) => {
+    if (isPast) return false
+    const isSuspended = suspendedDates.includes(date)
+    const schedule = getScheduleForDate(date)
+    const lunch = isSuspended ? false : (schedule?.lunch ?? true)
+    const dinner = isSuspended ? false : (schedule?.dinner ?? true)
+    return lunch || dinner
+  }).length
 
   return (
     <div className="space-y-6">
       {autoOff && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Meals Disabled</AlertTitle>
-          <AlertDescription>
+        <Alert className="border-red-600/30 bg-red-50 dark:bg-red-950/30">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertTitle className="text-red-700 dark:text-red-400">Meals disabled</AlertTitle>
+          <AlertDescription className="font-medium text-red-700 dark:text-red-400">
             {autoOffReason} Your upcoming meals are currently locked.
           </AlertDescription>
         </Alert>
       )}
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Meal Schedule</h1>
-        <p className="text-muted-foreground">All meals are ON by default. Turn OFF meals you don&apos;t need.</p>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Meal Schedule</h1>
+          <p className="text-muted-foreground">
+            All meals are ON by default. Turn OFF meals you don&apos;t need.
+          </p>
+        </div>
+        {periods.length > 0 && (
+          <Select value={selectedPeriodId} onValueChange={(v) => v && setSelectedPeriodId(v)}>
+            <SelectTrigger className="w-full sm:w-[260px]">
+              <SelectValue placeholder="Select period">
+                {periods.find((p) => p.id === selectedPeriodId)?.title || "Select period"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {periods.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
+      {/* Summary strip */}
+      {selectedPeriod && (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="flex items-center gap-3 rounded-xl border bg-card p-4 card-shadow">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <UtensilsCrossed className="h-5 w-5" />
-              Dining Period
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {periods.length > 0 ? (
-                <Select value={selectedPeriodId} onValueChange={(v) => v && setSelectedPeriodId(v)}>
-                  <SelectTrigger className="w-[250px]">
-                    <SelectValue placeholder="Select period">
-                      {periods.find((p) => p.id === selectedPeriodId)?.title || "Select period"}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {periods.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <p className="text-sm text-muted-foreground">No periods available</p>
-              )}
+            </span>
+            <div>
+              <p className="text-xs text-muted-foreground">Upcoming active days</p>
+              <p className="text-lg font-bold tabular-nums">{activeMealCount}</p>
             </div>
           </div>
-          {selectedPeriod && (
-            <CardDescription>
-              {new Date(selectedPeriod.startDate).toLocaleDateString()} to {new Date(selectedPeriod.endDate).toLocaleDateString()}
-              <br/>
-              Estimated Meal Rate for this period: {mealRate} BDT / meal
-            </CardDescription>
-          )}
+          <div className="flex items-center gap-3 rounded-xl border bg-card p-4 card-shadow">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <Users className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs text-muted-foreground">Estimated meal rate</p>
+              <p className="text-lg font-bold tabular-nums">{mealRate.toFixed(2)} BDT</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border bg-card p-4 card-shadow">
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400">
+              <CalendarDays className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs text-muted-foreground">Dining period</p>
+              <p className="text-sm font-semibold">
+                {new Date(selectedPeriod.startDate).toLocaleDateString()} — {new Date(selectedPeriod.endDate).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Card className="card-shadow">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UtensilsCrossed className="h-5 w-5 text-primary" />
+            Daily Meal Toggles
+          </CardTitle>
+          <CardDescription className="flex items-start gap-1.5">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            Meals can only be changed up to 10:00 PM the day before. Suspended days are locked.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-1">
-            <div className="grid grid-cols-4 gap-2 rounded-md bg-muted p-2 text-xs font-medium text-muted-foreground">
-              <span>Date</span>
-              <span className="text-center">Lunch</span>
-              <span className="text-center">Dinner</span>
-              <span className="text-center">Status</span>
+          {loading && periods.length > 0 ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14" />)}
             </div>
-            {dates.map(({ date, day, isPast, isToday, canEdit }) => {
-              const schedule = getScheduleForDate(date)
-              const isSuspended = suspendedDates.includes(date)
-              
-              // If suspended, the meal is forced OFF (just like Google Sheets renders 0)
-              const lunch = isSuspended ? false : (schedule?.lunch ?? true)
-              const dinner = isSuspended ? false : (schedule?.dinner ?? true)
-              
-              return (
-                <div
-                  key={date}
-                  className={`grid grid-cols-4 gap-2 rounded-md border p-2 text-sm items-center ${
-                    isToday ? "border-primary bg-primary/5" : ""
-                  } ${isSuspended ? "bg-red-50/30 border-red-200" : ""}`}
-                >
-                  <div>
-                    <span className="font-medium">{day}</span>
-                    <span className="ml-1 text-xs text-muted-foreground">
-                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(date).getDay()]}
-                    </span>
-                  </div>
-                  <div className="flex justify-center">
-                    <Switch
-                      checked={lunch}
-                      onCheckedChange={(v) => handleToggle(date, "lunch", v)}
-                      disabled={!canEdit || isSuspended}
-                    />
-                  </div>
-                  <div className="flex justify-center">
-                    <Switch
-                      checked={dinner}
-                      onCheckedChange={(v) => handleToggle(date, "dinner", v)}
-                      disabled={!canEdit || isSuspended}
-                    />
-                  </div>
-                  <div className="text-center">
-                    {isSuspended ? (
-                      <span className="text-xs font-semibold text-red-600">Suspended</span>
-                    ) : canEdit ? (
-                      <span className="text-xs text-green-600">Editable</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Locked</span>
+          ) : (
+            <div className="space-y-2">
+              <div className="grid grid-cols-[1.2fr_0.8fr_0.8fr_0.9fr] gap-2 rounded-lg bg-muted px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:grid-cols-[1.4fr_0.7fr_0.7fr_0.8fr]">
+                <span>Date</span>
+                <span className="text-center">Lunch</span>
+                <span className="text-center">Dinner</span>
+                <span className="text-center">Status</span>
+              </div>
+
+              {dates.map(({ date, day, month, isPast, isToday, canEdit }) => {
+                const schedule = getScheduleForDate(date)
+                const isSuspended = suspendedDates.includes(date)
+
+                const lunch = isSuspended ? false : (schedule?.lunch ?? true)
+                const dinner = isSuspended ? false : (schedule?.dinner ?? true)
+
+                return (
+                  <div
+                    key={date}
+                    className={cn(
+                      "grid grid-cols-[1.2fr_0.8fr_0.8fr_0.9fr] items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors sm:grid-cols-[1.4fr_0.7fr_0.7fr_0.8fr]",
+                      isToday ? "border-primary bg-primary/5" : "bg-card",
+                      isSuspended ? "border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/20" : ""
                     )}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={cn(
+                          "flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg leading-none",
+                          isToday
+                            ? "bg-primary text-primary-foreground"
+                            : isPast
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-primary/10 text-primary"
+                        )}
+                      >
+                        <span className="text-sm font-bold">{day}</span>
+                        <span className="text-[9px] font-medium uppercase">{MONTH_NAMES[month]}</span>
+                      </span>
+                      <div className="leading-tight">
+                        <p className="font-semibold">{DAY_NAMES[new Date(date).getDay()]}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isToday ? "Today" : isPast ? "Past" : "Upcoming"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                      <Switch
+                        checked={lunch}
+                        onCheckedChange={(v) => handleToggle(date, "lunch", v)}
+                        disabled={!canEdit || isSuspended}
+                      />
+                    </div>
+                    <div className="flex justify-center">
+                      <Switch
+                        checked={dinner}
+                        onCheckedChange={(v) => handleToggle(date, "dinner", v)}
+                        disabled={!canEdit || isSuspended}
+                      />
+                    </div>
+                    <div className="text-center">
+                      {isSuspended ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-600 dark:bg-red-950">
+                          <AlertTriangle className="h-3 w-3" /> Suspended
+                        </span>
+                      ) : canEdit ? (
+                        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950">
+                          Editable
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                          Locked
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-            {dates.length === 0 && <p className="text-sm text-muted-foreground mt-4 text-center">No dates in this period.</p>}
-          </div>
+                )
+              })}
+              {dates.length === 0 && (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No dates in this period.
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {balance !== undefined && (
+        <p className="text-center text-xs text-muted-foreground">
+          Wallet balance: {balance.toFixed(2)} BDT · {activeMealCount} active upcoming day
+          {activeMealCount === 1 ? "" : "s"}
+        </p>
+      )}
     </div>
   )
 }

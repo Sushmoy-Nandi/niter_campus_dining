@@ -151,14 +151,14 @@ export default function AdminStudents() {
               <div className="space-y-2">
                 <Label>Department</Label>
                 <Select value={form.department} onValueChange={(v) => setForm({ ...form, department: v ?? "" })}>
-                  <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Select department" /></SelectTrigger>
                   <SelectContent>{departments.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Session</Label>
                 <Select value={form.session} onValueChange={(v) => setForm({ ...form, session: v ?? "" })}>
-                  <SelectTrigger><SelectValue placeholder="Select session" /></SelectTrigger>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Select session" /></SelectTrigger>
                   <SelectContent>{sessions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>

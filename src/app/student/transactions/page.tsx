@@ -3,10 +3,10 @@
 import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ArrowDownCircle, ArrowUpCircle, Receipt, Info } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export default function StudentTransactions() {
   const [transactions, setTransactions] = useState<any[]>([])
@@ -27,6 +27,8 @@ export default function StudentTransactions() {
 
   useEffect(() => { fetchTransactions() }, [fetchTransactions])
 
+  const isDeposit = (type: string) => type === "DEPOSIT"
+
   return (
     <div className="space-y-6">
       <div>
@@ -34,8 +36,9 @@ export default function StudentTransactions() {
         <p className="text-muted-foreground">View all your deposit and deduction history</p>
       </div>
 
-      <Card className="border-dashed">
-        <CardContent className="pt-6">
+      <Card className="border-dashed bg-primary/5">
+        <CardContent className="flex items-start gap-3 pt-6">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <p className="text-sm text-muted-foreground">
             Meal costs are <span className="font-medium text-foreground">not</span> deducted as fixed daily
             charges. Your meal cost is calculated dynamically from the current bazaar rate (total bazaar spend
@@ -44,7 +47,8 @@ export default function StudentTransactions() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <Receipt className="h-4 w-4 text-muted-foreground" />
         <Select value={filter} onValueChange={(v) => { setFilter(v ?? "ALL"); setPage(1) }}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
@@ -52,50 +56,78 @@ export default function StudentTransactions() {
           <SelectContent>
             <SelectItem value="ALL">All Types</SelectItem>
             <SelectItem value="DEPOSIT">Deposits</SelectItem>
-            <SelectItem value="REFUND">REFUND</SelectItem>
+            <SelectItem value="REFUND">Refunds</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <Card>
+      <Card className="card-shadow">
         <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
+          <CardTitle className="text-lg">Transaction History</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="space-y-2">
-              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14" />)}
             </div>
           ) : transactions.length === 0 ? (
-            <p className="text-muted-foreground">No transactions found</p>
+            <div className="flex flex-col items-center py-12 text-muted-foreground">
+              <Receipt className="mb-3 h-10 w-10 opacity-40" />
+              <p>No transactions found</p>
+            </div>
           ) : (
             <>
               <div className="space-y-2">
                 {transactions.map((tx: any) => (
-                  <div key={tx.id} className="flex items-center justify-between rounded-lg border p-3">
-                    <div>
-                      <Badge variant={tx.type === "DEPOSIT" ? "default" : "outline"}>
-                        {tx.type.replace("_", " ")}
-                      </Badge>
-                      <span className="ml-3 text-sm">{tx.description || "N/A"}</span>
+                  <div key={tx.id} className="flex items-center justify-between gap-3 rounded-lg border bg-muted/20 px-3.5 py-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                          isDeposit(tx.type)
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            : "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                        )}
+                      >
+                        {isDeposit(tx.type) ? (
+                          <ArrowDownCircle className="h-4.5 w-4.5" />
+                        ) : (
+                          <ArrowUpCircle className="h-4.5 w-4.5" />
+                        )}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{tx.description || tx.type.replace("_", " ")}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(tx.createdAt).toLocaleString()}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`font-medium ${tx.type === "DEPOSIT" ? "text-green-600" : "text-red-600"}`}>
-                        {tx.type === "DEPOSIT" ? "+" : "-"}{tx.amount.toFixed(2)} BDT
+                    <div className="shrink-0 text-right">
+                      <p
+                        className={cn(
+                          "font-bold tabular-nums",
+                          isDeposit(tx.type)
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400"
+                        )}
+                      >
+                        {isDeposit(tx.type) ? "+" : "-"}{tx.amount.toFixed(2)} BDT
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(tx.createdAt).toLocaleString()}
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {tx.type.replace("_", " ")}
                       </p>
                     </div>
                   </div>
                 ))}
               </div>
               {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-center gap-2">
+                <div className="mt-5 flex items-center justify-center gap-3">
                   <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm">Page {page} of {totalPages}</span>
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    Page {page} of {totalPages}
+                  </span>
                   <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>

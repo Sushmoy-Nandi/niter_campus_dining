@@ -7,9 +7,9 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { APP_NAME } from "@/lib/constants"
+import { AuthLayout } from "@/components/layout/auth-layout"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2, Mail, Lock, ShieldCheck } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -24,7 +24,7 @@ export default function LoginPage() {
     const res = await fetch("/api/auth/session")
     const session = await res.json()
     const role = (session?.user as any)?.role;
-    
+
     if (role === "ADMIN") {
       router.push("/admin/dashboard")
     } else if (role === "STAFF") {
@@ -40,7 +40,6 @@ export default function LoginPage() {
     setError("")
 
     if (step === "PASSWORD") {
-      // First, attempt to trigger the OTP if it's an admin
       try {
         const otpReq = await fetch("/api/admin/auth/send-otp", {
           method: "POST",
@@ -48,9 +47,8 @@ export default function LoginPage() {
           body: JSON.stringify({ email, password })
         });
         const otpRes = await otpReq.json();
-        
+
         if (otpRes.success) {
-          // It's an admin with correct password! Switch to OTP screen.
           setStep("OTP")
           setLoading(false)
           return
@@ -59,8 +57,6 @@ export default function LoginPage() {
         console.error("OTP API Error:", err)
       }
 
-      // If we are here, it's either a student logging in normally,
-      // or an admin who entered the wrong password. Let NextAuth handle it.
       const result = await signIn("credentials", {
         email,
         password,
@@ -68,15 +64,12 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        // NextAuth v5 beta hides custom messages by default
         setError("Invalid email or password")
         setLoading(false)
       } else {
-        // Success (Student or Staff)
         await handleSuccessRedirect()
       }
     } else {
-      // Step: OTP
       const result = await signIn("credentials", {
         email,
         otp,
@@ -87,90 +80,96 @@ export default function LoginPage() {
         setError("Invalid OTP or expired")
         setLoading(false)
       } else {
-        // Success (Admin)
         await handleSuccessRedirect()
       }
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xl">
-            N
-          </div>
-          <CardTitle className="text-2xl">
-            {step === "PASSWORD" ? "Welcome back" : "Admin Verification"}
-          </CardTitle>
-          <CardDescription>
-            {step === "PASSWORD" ? `Sign in to ${APP_NAME}` : "Enter the 6-digit code sent to your email"}
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            
-            {step === "PASSWORD" && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="admin@niter.edu.bd"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </div>
-              </>
-            )}
+    <AuthLayout
+      title={step === "PASSWORD" ? "Welcome back" : "Admin Verification"}
+      description={
+        step === "PASSWORD"
+          ? "Sign in to manage your meals and dining account."
+          : "Enter the 6-digit code sent to your email"
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {error && (
+          <Alert variant="destructive" className="py-2.5">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
-            {step === "OTP" && (
-              <div className="space-y-2">
-                <Label htmlFor="otp">Verification Code</Label>
+        {step === "PASSWORD" ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  id="otp"
-                  type="text"
-                  placeholder="123456"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  maxLength={6}
+                  id="email"
+                  type="email"
+                  placeholder="admin@niter.edu.bd"
+                  className="h-10 pl-9"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Verifying..." : step === "PASSWORD" ? "Sign In" : "Verify & Login"}
-            </Button>
-            {step === "PASSWORD" && (
-              <p className="text-sm text-muted-foreground text-center">
-                Don&apos;t have an account?{" "}
-                <Link href="/register" className="text-primary hover:underline">
-                  Register
-                </Link>
-              </p>
-            )}
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  className="h-10 pl-9"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="space-y-2">
+            <Label htmlFor="otp">Verification Code</Label>
+            <div className="relative">
+              <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="otp"
+                type="text"
+                placeholder="123456"
+                className="h-10 pl-9 tracking-widest"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                maxLength={6}
+                required
+              />
+            </div>
+          </div>
+        )}
+
+        <Button type="submit" className="h-10 w-full text-base" disabled={loading}>
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          {loading
+            ? "Verifying..."
+            : step === "PASSWORD"
+              ? "Sign In"
+              : "Verify & Login"}
+        </Button>
+
+        {step === "PASSWORD" && (
+          <p className="text-center text-sm text-muted-foreground">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" className="font-medium text-primary hover:underline">
+              Register
+            </Link>
+          </p>
+        )}
+      </form>
+    </AuthLayout>
   )
 }
