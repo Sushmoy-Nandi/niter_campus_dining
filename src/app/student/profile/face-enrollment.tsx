@@ -108,7 +108,7 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
           
           if (detection) {
             const landmarks = detection.landmarks
-            const nose = landmarks.getNose()[0]
+            const nose = landmarks.getNose()[3] // The tip of the nose moves the most during a head turn
             const jawLeft = landmarks.getJawOutline()[0]
             const jawRight = landmarks.getJawOutline()[16]
             
@@ -124,14 +124,14 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
               }
             } else if (captureStageRef.current === "LEFT") {
               // Due to mirror effect, turning left moves nose to the right side of the screen
-              if (yawRatio > 0.65) {
+              if (yawRatio > 0.6) {
                 captureStageRef.current = "RIGHT"
                 setInstruction("Good! Now turn your head slightly to your RIGHT.")
                 toast.success("Left face captured.")
               }
             } else if (captureStageRef.current === "RIGHT") {
               // Turning right moves nose to the left side
-              if (yawRatio < 0.35) {
+              if (yawRatio < 0.4) {
                 captureStageRef.current = "REGISTERING"
                 setInstruction("Processing and registering...")
                 toast.success("Right face captured. Registering...")
