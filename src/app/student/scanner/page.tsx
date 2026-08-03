@@ -11,12 +11,16 @@ import * as faceapi from "@vladmandic/face-api"
 export default function StudentInAppScanner() {
   const router = useRouter()
   const [isScanning, setIsScanning] = useState(false)
+  const [isVerifyingFace, setIsVerifyingFace] = useState(false)
+  const [scannedToken, setScannedToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [isModelsLoaded, setIsModelsLoaded] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string>("")
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
   const hasStarted = useRef(false)
+  const faceVideoRef = useRef<HTMLVideoElement>(null)
+  const faceRequestRef = useRef<number>(0)
 
   useEffect(() => {
     const loadModels = async () => {
@@ -55,8 +59,11 @@ export default function StudentInAppScanner() {
     setResult(null)
     setError("")
     setIsScanning(false)
+    setIsVerifyingFace(false)
+    setScannedToken(null)
     setLoading(false)
     hasStarted.current = false
+    stopFaceCamera()
   }
 
   const processScanData = async (token: string, faceDescriptor: string) => {
@@ -86,8 +93,66 @@ export default function StudentInAppScanner() {
     }
   }
 
+  const startFaceCamera = async (token: string) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+      setTimeout(() => {
+        if (faceVideoRef.current) {
+          faceVideoRef.current.srcObject = stream
+          startFaceDetectionLoop(token)
+        }
+      }, 100)
+    } catch (err) {
+      console.error(err)
+      setError("Please grant camera permissions to verify your face.")
+    }
+  }
+
+  const stopFaceCamera = () => {
+    if (faceRequestRef.current) cancelAnimationFrame(faceRequestRef.current)
+    if (faceVideoRef.current && faceVideoRef.current.srcObject) {
+      const stream = faceVideoRef.current.srcObject as MediaStream
+      stream.getTracks().forEach(track => track.stop())
+      faceVideoRef.current.srcObject = null
+    }
+  }
+
+  const startFaceDetectionLoop = (token: string) => {
+    let lastRun = Date.now()
+    let attempts = 0
+
+    const analyzeFace = async () => {
+      if (!faceVideoRef.current || hasStarted.current) return
+
+      if (Date.now() - lastRun > 500) {
+        try {
+          const detection = await faceapi.detectSingleFace(faceVideoRef.current).withFaceLandmarks().withFaceDescriptor()
+          
+          if (detection) {
+            stopFaceCamera()
+            const faceDescriptor = JSON.stringify(Array.from(detection.descriptor))
+            await processScanData(token, faceDescriptor)
+            return // End loop
+          } else {
+            attempts++
+            if (attempts > 20) { // 10 seconds timeout
+              stopFaceCamera()
+              setError("No face detected. Please try scanning again and look directly at your screen.")
+              return
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+        lastRun = Date.now()
+      }
+      faceRequestRef.current = requestAnimationFrame(analyzeFace)
+    }
+    faceRequestRef.current = requestAnimationFrame(analyzeFace)
+  }
+
   const handleScan = async (scannedText: string) => {
-    if (!scannedText) return
+    if (!scannedText || hasStarted.current) return
 
     // Extract the token parameter from the URL in case they scanned the full link
     const tokenMatch = scannedText.match(/[?&]token=([^&#]+)/)
@@ -98,24 +163,10 @@ export default function StudentInAppScanner() {
       return
     }
 
-    try {
-      const videoEl = document.querySelector('video')
-      if (!videoEl) {
-        setError("Camera not found.")
-        return
-      }
-
-      const detection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor()
-      if (!detection) {
-        setError("No face detected. Please look directly at the camera while scanning.")
-        return
-      }
-
-      const faceDescriptor = JSON.stringify(Array.from(detection.descriptor))
-      await processScanData(token, faceDescriptor)
-    } catch (err) {
-      setError("Face verification failed to process. Ensure models are loaded.")
-    }
+    setScannedToken(token)
+    setIsScanning(false)
+    setIsVerifyingFace(true)
+    startFaceCamera(token)
   }
 
   // --- RENDERING STATES ---
@@ -221,7 +272,39 @@ export default function StudentInAppScanner() {
     )
   }
 
-  // 4. Idle Scanner Screen
+
+  // 4. Verifying Face State
+  if (isVerifyingFace) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] space-y-6 max-w-md mx-auto px-4">
+        <h2 className="text-2xl font-bold text-center">Verifying Identity</h2>
+        <p className="text-muted-foreground text-center">Please look directly at your screen.</p>
+        
+        <div className="relative rounded-lg overflow-hidden border-4 border-primary bg-black max-w-xs w-full aspect-square shadow-2xl">
+          <video 
+            ref={faceVideoRef} 
+            autoPlay 
+            muted 
+            playsInline 
+            className="w-full h-full object-cover transform scale-x-[-1]" 
+          />
+          <div className="absolute inset-0 bg-primary/10 animate-pulse pointer-events-none" />
+          <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
+            <span className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
+              <Loader2 className="h-4 w-4 inline mr-2 animate-spin" />
+              Scanning Face...
+            </span>
+          </div>
+        </div>
+
+        <Button variant="outline" onClick={handleReset} className="w-full max-w-xs">
+          Cancel
+        </Button>
+      </div>
+    )
+  }
+
+  // 5. Idle Scanner Screen
   return (
     <div className="space-y-6 max-w-md mx-auto">
       <div className="flex items-center gap-2">
