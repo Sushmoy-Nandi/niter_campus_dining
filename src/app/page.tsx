@@ -74,7 +74,7 @@ const steps = [
 
 const stats = [
   { value: "400+", label: "Students served per day" },
-  { value: "3", label: "Meals a day" },
+  { value: "2", label: "Meals a day" },
   { value: "24/7", label: "Wallet access" },
   { value: "100%", label: "Cashless dining" },
 ]
