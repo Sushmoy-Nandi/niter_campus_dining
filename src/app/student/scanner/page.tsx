@@ -6,15 +6,34 @@ import { Scanner } from "@yudiel/react-qr-scanner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, XCircle, Loader2, ScanLine, ArrowLeft } from "lucide-react"
+import * as faceapi from "@vladmandic/face-api"
 
 export default function StudentInAppScanner() {
   const router = useRouter()
   const [isScanning, setIsScanning] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [isModelsLoaded, setIsModelsLoaded] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState<string>("")
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
   const hasStarted = useRef(false)
+
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('/models')
+        ])
+        setIsModelsLoaded(true)
+      } catch (error) {
+        console.error("Failed to load models:", error)
+        setError("Failed to load facial recognition models.")
+      }
+    }
+    loadModels()
+  }, [])
 
   // Security: Live ticking time for anti-screenshot
   useEffect(() => {
@@ -40,7 +59,7 @@ export default function StudentInAppScanner() {
     hasStarted.current = false
   }
 
-  const processScanData = async (token: string) => {
+  const processScanData = async (token: string, faceDescriptor: string) => {
     if (hasStarted.current) return
     hasStarted.current = true
     setLoading(true)
@@ -50,7 +69,7 @@ export default function StudentInAppScanner() {
       const res = await fetch("/api/student/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token })
+        body: JSON.stringify({ token, faceDescriptor })
       })
 
       const data = await res.json()
@@ -71,14 +90,31 @@ export default function StudentInAppScanner() {
     if (!scannedText) return
 
     // Extract the token parameter from the URL in case they scanned the full link
-    // e.g., https://.../student/scan?token=ey...
     const tokenMatch = scannedText.match(/[?&]token=([^&#]+)/)
     const token = tokenMatch ? tokenMatch[1] : scannedText
 
-    if (token) {
-      await processScanData(token)
-    } else {
+    if (!token) {
       setError("Invalid QR code format. Please scan a valid dining hall QR code.")
+      return
+    }
+
+    try {
+      const videoEl = document.querySelector('video')
+      if (!videoEl) {
+        setError("Camera not found.")
+        return
+      }
+
+      const detection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor()
+      if (!detection) {
+        setError("No face detected. Please look directly at the camera while scanning.")
+        return
+      }
+
+      const faceDescriptor = JSON.stringify(Array.from(detection.descriptor))
+      await processScanData(token, faceDescriptor)
+    } catch (err) {
+      setError("Face verification failed to process. Ensure models are loaded.")
     }
   }
 

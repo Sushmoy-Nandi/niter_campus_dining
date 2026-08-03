@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import QRCode from "react-qr-code"
+import { FaceEnrollment } from "./face-enrollment"
 
 export default function StudentProfile() {
   const [student, setStudent] = useState<any>(null)
@@ -367,6 +368,8 @@ export default function StudentProfile() {
           </div>
         </CardContent>
       </Card>
+
+      <FaceEnrollment hasFaceRegistered={!!student.faceDescriptor} />
     </div>
   )
 }

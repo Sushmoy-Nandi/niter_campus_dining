@@ -41,6 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 /Untracked
+/src 1
 
 # Scratch scripts and temporary files
 /*.js

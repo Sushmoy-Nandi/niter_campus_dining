@@ -100,6 +100,7 @@ model Student {
   isActive   Boolean  @default(true)
   userId     String   @unique
   whatsapp   String?
+  faceDescriptor String? @db.Text
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

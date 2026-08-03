@@ -31,9 +31,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized. Please log in as a student." }, { status: 401 })
     }
 
-    const { token } = await req.json()
+    const { token, faceDescriptor } = await req.json()
     if (!token) {
       return NextResponse.json({ error: "Missing QR token" }, { status: 400 })
+    }
+    if (!faceDescriptor) {
+      return NextResponse.json({ error: "Face verification is required. Please allow camera access and look at the camera." }, { status: 400 })
     }
 
     // 1. Verify token (same fail-closed secret the generator signs with).
@@ -94,6 +97,31 @@ export async function POST(req: Request) {
 
     if (!student.isActive) {
       return NextResponse.json({ error: "Student account is inactive" }, { status: 403 })
+    }
+
+    if (!student.faceDescriptor) {
+      return NextResponse.json({ error: "You must register your face in the profile page before checking in." }, { status: 403 })
+    }
+
+    // 3.5 Face Verification
+    try {
+      const storedDescriptor = JSON.parse(student.faceDescriptor) as number[]
+      const liveDescriptor = JSON.parse(faceDescriptor) as number[]
+      
+      if (storedDescriptor.length !== 128 || liveDescriptor.length !== 128) {
+        throw new Error("Invalid descriptor format")
+      }
+      
+      const distance = Math.sqrt(
+        storedDescriptor.reduce((acc, val, i) => acc + Math.pow(val - liveDescriptor[i], 2), 0)
+      )
+
+      if (distance > 0.55) {
+        await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_FACE`, details: "Face verification failed." }})
+        return NextResponse.json({ error: "Face verification failed. Please try again." }, { status: 403 })
+      }
+    } catch (err) {
+      return NextResponse.json({ error: "Face verification error. Please ensure your face is registered properly." }, { status: 400 })
     }
 
     // 4. Find Active Period
