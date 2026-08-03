@@ -51,7 +51,19 @@ export function AppNavbar() {
     .join("")
     .toUpperCase() || "U"
 
-  const pageTitle = TITLES[pathname] || pathname.split("/").pop() || ""
+  let pageTitle = TITLES[pathname]
+  
+  if (!pageTitle) {
+    if (pathname.startsWith("/admin/students/")) {
+      pageTitle = "Student Details"
+    } else {
+      pageTitle = pathname.split("/").pop() || ""
+      // Format the fallback title slightly better
+      if (pageTitle && !pageTitle.includes("-") && pageTitle.length < 20) {
+        pageTitle = pageTitle.charAt(0).toUpperCase() + pageTitle.slice(1)
+      }
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md">
@@ -89,14 +101,14 @@ export function AppNavbar() {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-60" align="end">
-            <DropdownMenuLabel className="font-normal">
+            <div className="px-2 py-1.5 font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">{session?.user?.name}</p>
                 <p className="text-xs leading-none text-muted-foreground">
                   {session?.user?.email}
                 </p>
               </div>
-            </DropdownMenuLabel>
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => router.push("/student/profile")}
