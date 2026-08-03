@@ -83,8 +83,9 @@ The application will be available at http://localhost:3000
 - Toggle lunch/dinner ON/OFF for any date
 - View today's and tomorrow's meal status
 - **Digital Dining Pass (QR Code)** for meal check-in
+- **In-App QR Scanner with Real-time AI Face Verification** (Prevents QR code sharing)
 - **Active Polls & Feedback** for menu choices and food rating
-- Profile with editable personal information
+- Profile with editable personal information and **Face Registration**
 
 ### Admin & Staff
 - Dashboard with charts (daily meals, deposits vs deductions)
