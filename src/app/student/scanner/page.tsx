@@ -26,7 +26,7 @@ export default function StudentInAppScanner() {
     const loadModels = async () => {
       try {
         await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
+          faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
           faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
           faceapi.nets.faceRecognitionNet.loadFromUri('/models')
         ])
@@ -95,13 +95,17 @@ export default function StudentInAppScanner() {
 
   const startFaceCamera = async (token: string) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-      setTimeout(() => {
-        if (faceVideoRef.current) {
-          faceVideoRef.current.srcObject = stream
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "user", width: { ideal: 320 }, height: { ideal: 240 } } 
+      })
+      if (faceVideoRef.current) {
+        faceVideoRef.current.srcObject = stream
+        // Wait for the video to actually start playing before running detection
+        faceVideoRef.current.onloadeddata = () => {
           startFaceDetectionLoop(token)
         }
-      }, 100)
+        await faceVideoRef.current.play().catch(() => {})
+      }
     } catch (err) {
       console.error(err)
       setError("Please grant camera permissions to verify your face.")
@@ -109,48 +113,51 @@ export default function StudentInAppScanner() {
   }
 
   const stopFaceCamera = () => {
-    if (faceRequestRef.current) cancelAnimationFrame(faceRequestRef.current)
-    if (faceVideoRef.current && faceVideoRef.current.srcObject) {
-      const stream = faceVideoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach(track => track.stop())
-      faceVideoRef.current.srcObject = null
+    if (faceRequestRef.current) {
+      cancelAnimationFrame(faceRequestRef.current)
+      clearTimeout(faceRequestRef.current)
+    }
+    if (faceVideoRef.current) {
+      faceVideoRef.current.onloadeddata = null
+      if (faceVideoRef.current.srcObject) {
+        const stream = faceVideoRef.current.srcObject as MediaStream
+        stream.getTracks().forEach(track => track.stop())
+        faceVideoRef.current.srcObject = null
+      }
     }
   }
 
   const startFaceDetectionLoop = (token: string) => {
-    let lastRun = Date.now()
-    let attempts = 0
+    const tinyOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.3 })
 
     const analyzeFace = async () => {
       if (!faceVideoRef.current || hasStarted.current) return
 
-      if (Date.now() - lastRun > 500) {
-        if (faceVideoRef.current.readyState >= 2 && faceVideoRef.current.videoWidth > 0) {
-          try {
-            const detection = await faceapi.detectSingleFace(faceVideoRef.current).withFaceLandmarks().withFaceDescriptor()
-            
-            if (detection) {
-              stopFaceCamera()
-              const faceDescriptor = JSON.stringify(Array.from(detection.descriptor))
-              await processScanData(token, faceDescriptor)
-              return // End loop
-            } else {
-              attempts++
-              if (attempts > 40) { // 20 seconds timeout
-                stopFaceCamera()
-                setError("No face detected. Please try scanning again and look directly at your screen.")
-                return
-              }
-            }
-          } catch (e) {
-            // ignore
-          }
+      try {
+        const detection = await faceapi
+          .detectSingleFace(faceVideoRef.current, tinyOptions)
+          .withFaceLandmarks()
+          .withFaceDescriptor()
+        
+        if (detection) {
+          stopFaceCamera()
+          const faceDescriptor = JSON.stringify(Array.from(detection.descriptor))
+          await processScanData(token, faceDescriptor)
+          return // End loop — face found!
         }
-        lastRun = Date.now()
+      } catch (e) {
+        // ignore — model still warming up
       }
-      faceRequestRef.current = requestAnimationFrame(analyzeFace)
+
+      // No face yet — keep trying (no timeout, user can cancel manually)
+      faceRequestRef.current = window.setTimeout(() => {
+        requestAnimationFrame(analyzeFace)
+      }, 300) as unknown as number
     }
-    faceRequestRef.current = requestAnimationFrame(analyzeFace)
+    // Start after a small initial delay for the camera to warm up
+    faceRequestRef.current = window.setTimeout(() => {
+      requestAnimationFrame(analyzeFace)
+    }, 500) as unknown as number
   }
 
   const handleScan = async (scannedText: string) => {
