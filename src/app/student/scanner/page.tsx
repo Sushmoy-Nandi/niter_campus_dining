@@ -166,7 +166,11 @@ export default function StudentInAppScanner() {
     setScannedToken(token)
     setIsScanning(false)
     setIsVerifyingFace(true)
-    startFaceCamera(token)
+    
+    // Give the QR Scanner time to unmount and release the hardware camera lock
+    setTimeout(() => {
+      startFaceCamera(token)
+    }, 800)
   }
 
   // --- RENDERING STATES ---
