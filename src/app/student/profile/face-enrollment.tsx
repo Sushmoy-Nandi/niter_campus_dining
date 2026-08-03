@@ -14,6 +14,7 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
   const [isRegistered, setIsRegistered] = useState(hasFaceRegistered)
   const [instruction, setInstruction] = useState("Look directly at the camera")
   const [progress, setProgress] = useState({ center: false, left: false, right: false })
+  const [debugYaw, setDebugYaw] = useState<number | null>(null)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const captureStageRef = useRef<"IDLE" | "CENTER" | "LEFT" | "RIGHT" | "REGISTERING">("IDLE")
@@ -112,15 +113,18 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
           
           if (detection) {
             const landmarks = detection.landmarks
-            const nose = landmarks.getNose()[3] // The tip of the nose moves the most during a head turn
-            const jawLeft = landmarks.getJawOutline()[0]
-            const jawRight = landmarks.getJawOutline()[16]
+            // Use precise 68-point model indices
+            const nose = landmarks.positions[30] // Exact nose tip
+            const jawLeft = landmarks.positions[0] // Exact left jaw edge
+            const jawRight = landmarks.positions[16] // Exact right jaw edge
             
             const jawWidth = jawRight.x - jawLeft.x
             const yawRatio = (nose.x - jawLeft.x) / jawWidth
+            setDebugYaw(Math.round(yawRatio * 100))
 
             if (captureStageRef.current === "CENTER") {
-              if (yawRatio > 0.4 && yawRatio < 0.6) {
+              // Relaxed threshold: 0.3 to 0.7
+              if (yawRatio > 0.3 && yawRatio < 0.7) {
                 centerDescriptorRef.current = detection.descriptor
                 captureStageRef.current = "LEFT"
                 setProgress(p => ({ ...p, center: true }))
@@ -129,7 +133,8 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
               }
             } else if (captureStageRef.current === "LEFT") {
               // Due to mirror effect, turning left moves nose to the right side of the screen
-              if (yawRatio > 0.6) {
+              // Require > 0.7
+              if (yawRatio > 0.7) {
                 captureStageRef.current = "RIGHT"
                 setProgress(p => ({ ...p, left: true }))
                 setInstruction("Good! Now turn your head slightly to your RIGHT.")
@@ -137,7 +142,8 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
               }
             } else if (captureStageRef.current === "RIGHT") {
               // Turning right moves nose to the left side
-              if (yawRatio < 0.4) {
+              // Require < 0.3
+              if (yawRatio < 0.3) {
                 captureStageRef.current = "REGISTERING"
                 setProgress(p => ({ ...p, right: true }))
                 setInstruction("Processing and registering...")
@@ -189,6 +195,13 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
                 playsInline 
                 className="w-full h-full object-cover transform scale-x-[-1]" 
               />
+              <div className="absolute top-4 left-4 pointer-events-none">
+                {debugYaw !== null && (
+                  <span className="bg-black/70 text-white px-2 py-1 rounded text-xs font-mono">
+                    Alignment: {debugYaw}%
+                  </span>
+                )}
+              </div>
               <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
                 <span className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
                   {instruction}
