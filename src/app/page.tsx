@@ -73,7 +73,7 @@ const steps = [
 ]
 
 const stats = [
-  { value: "1,200+", label: "Students served" },
+  { value: "400+", label: "Students served per day" },
   { value: "3", label: "Meals a day" },
   { value: "24/7", label: "Wallet access" },
   { value: "100%", label: "Cashless dining" },
@@ -148,9 +148,6 @@ export default function LandingPage() {
 
             {/* Trust row */}
             <div className="animate-fade-up animation-delay-300 mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Star className="h-4 w-4 fill-accent text-accent" /> Students love it
-              </span>
               <span className="flex items-center gap-1.5">
                 <Clock3 className="h-4 w-4 text-primary" /> Instant bKash verification
               </span>
