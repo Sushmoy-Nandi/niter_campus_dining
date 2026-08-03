@@ -13,6 +13,7 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
   const [isCameraActive, setIsCameraActive] = useState(false)
   const [isRegistered, setIsRegistered] = useState(hasFaceRegistered)
   const [instruction, setInstruction] = useState("Look directly at the camera")
+  const [progress, setProgress] = useState({ center: false, left: false, right: false })
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const captureStageRef = useRef<"IDLE" | "CENTER" | "LEFT" | "RIGHT" | "REGISTERING">("IDLE")
@@ -42,6 +43,7 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
       setIsCameraActive(true)
       captureStageRef.current = "CENTER"
       setInstruction("Look directly at the camera")
+      setProgress({ center: false, left: false, right: false })
       centerDescriptorRef.current = null
       
       setTimeout(() => {
@@ -85,11 +87,13 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
         toast.error(data.error || "Failed to register face.")
         captureStageRef.current = "CENTER"
         setInstruction("Look directly at the camera")
+        setProgress({ center: false, left: false, right: false })
       }
     } catch (error) {
       toast.error("An error occurred. Please try again.")
       captureStageRef.current = "CENTER"
       setInstruction("Look directly at the camera")
+      setProgress({ center: false, left: false, right: false })
     }
   }
 
@@ -119,6 +123,7 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
               if (yawRatio > 0.4 && yawRatio < 0.6) {
                 centerDescriptorRef.current = detection.descriptor
                 captureStageRef.current = "LEFT"
+                setProgress(p => ({ ...p, center: true }))
                 setInstruction("Good! Now turn your head slightly to your LEFT.")
                 toast.success("Center face captured.")
               }
@@ -126,6 +131,7 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
               // Due to mirror effect, turning left moves nose to the right side of the screen
               if (yawRatio > 0.6) {
                 captureStageRef.current = "RIGHT"
+                setProgress(p => ({ ...p, left: true }))
                 setInstruction("Good! Now turn your head slightly to your RIGHT.")
                 toast.success("Left face captured.")
               }
@@ -133,6 +139,7 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
               // Turning right moves nose to the left side
               if (yawRatio < 0.4) {
                 captureStageRef.current = "REGISTERING"
+                setProgress(p => ({ ...p, right: true }))
                 setInstruction("Processing and registering...")
                 toast.success("Right face captured. Registering...")
                 
@@ -188,6 +195,24 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
                 </span>
               </div>
             </div>
+            
+            <div className="flex w-full max-w-sm justify-between px-4 mt-2">
+              <div className="flex flex-col items-center">
+                {progress.center ? <CheckCircle2 className="h-6 w-6 text-green-500" /> : <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />}
+                <span className="text-xs mt-1 text-gray-500 font-medium">Front</span>
+              </div>
+              <div className="flex-1 border-b-2 border-dashed border-gray-200 self-center mb-5 mx-2"></div>
+              <div className="flex flex-col items-center">
+                {progress.left ? <CheckCircle2 className="h-6 w-6 text-green-500" /> : <Loader2 className={`h-6 w-6 text-gray-400 ${progress.center && !progress.left ? 'animate-spin' : ''}`} />}
+                <span className="text-xs mt-1 text-gray-500 font-medium">Left</span>
+              </div>
+              <div className="flex-1 border-b-2 border-dashed border-gray-200 self-center mb-5 mx-2"></div>
+              <div className="flex flex-col items-center">
+                {progress.right ? <CheckCircle2 className="h-6 w-6 text-green-500" /> : <Loader2 className={`h-6 w-6 text-gray-400 ${progress.left && !progress.right ? 'animate-spin' : ''}`} />}
+                <span className="text-xs mt-1 text-gray-500 font-medium">Right</span>
+              </div>
+            </div>
+
             <div className="flex gap-4">
               <Button variant="outline" onClick={stopCamera}>
                 Cancel
