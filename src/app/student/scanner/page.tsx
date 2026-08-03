@@ -125,24 +125,26 @@ export default function StudentInAppScanner() {
       if (!faceVideoRef.current || hasStarted.current) return
 
       if (Date.now() - lastRun > 500) {
-        try {
-          const detection = await faceapi.detectSingleFace(faceVideoRef.current).withFaceLandmarks().withFaceDescriptor()
-          
-          if (detection) {
-            stopFaceCamera()
-            const faceDescriptor = JSON.stringify(Array.from(detection.descriptor))
-            await processScanData(token, faceDescriptor)
-            return // End loop
-          } else {
-            attempts++
-            if (attempts > 20) { // 10 seconds timeout
+        if (faceVideoRef.current.readyState >= 2 && faceVideoRef.current.videoWidth > 0) {
+          try {
+            const detection = await faceapi.detectSingleFace(faceVideoRef.current).withFaceLandmarks().withFaceDescriptor()
+            
+            if (detection) {
               stopFaceCamera()
-              setError("No face detected. Please try scanning again and look directly at your screen.")
-              return
+              const faceDescriptor = JSON.stringify(Array.from(detection.descriptor))
+              await processScanData(token, faceDescriptor)
+              return // End loop
+            } else {
+              attempts++
+              if (attempts > 40) { // 20 seconds timeout
+                stopFaceCamera()
+                setError("No face detected. Please try scanning again and look directly at your screen.")
+                return
+              }
             }
+          } catch (e) {
+            // ignore
           }
-        } catch (e) {
-          // ignore
         }
         lastRun = Date.now()
       }
