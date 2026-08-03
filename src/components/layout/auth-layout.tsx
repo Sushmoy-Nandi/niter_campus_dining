@@ -5,7 +5,7 @@ import { UtensilsCrossed, QrCode, Wallet, CalendarCheck } from "lucide-react"
 const highlights = [
   {
     icon: CalendarCheck,
-    text: "Plan breakfast, lunch & dinner with one tap",
+    text: "Plan lunch & dinner with one tap",
   },
   {
     icon: Wallet,
