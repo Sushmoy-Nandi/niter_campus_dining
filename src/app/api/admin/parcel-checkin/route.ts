@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
       })
 
       results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "success", message: `${currentMeal} parcel checked in` })
-      triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "SUCCESS", reason: `Parcel check-in` });
+      triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "SUCCESS", reason: `Parcel check-in for ${currentMeal}` });
     }
 
     const successCount = results.filter(r => r.status === "success").length
