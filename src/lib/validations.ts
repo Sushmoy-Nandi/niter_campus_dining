@@ -11,7 +11,7 @@ export const registerSchema = z.object({
   email: z.string().email("Invalid email address"),
   department: z.string().min(2, "Department is required"),
   session: z.string().min(4, "Session is required"),
-  gender: z.enum(["MALE", "FEMALE"], { required_error: "Gender is required" }),
+  gender: z.enum(["MALE", "FEMALE"]),
   whatsapp: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
