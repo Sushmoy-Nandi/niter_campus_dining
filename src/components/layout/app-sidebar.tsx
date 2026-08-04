@@ -64,14 +64,14 @@ const adminNavGroups = [
     label: "Overview",
     items: [
       { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-      { title: "Scan Monitor", href: "/admin/scan-logs", icon: Activity },
+      { title: "Scan Monitor", href: "/staff/scan-logs", icon: Activity },
     ],
   },
   {
     label: "Operations",
     items: [
       { title: "QR Generator", href: "/admin/qr-generator", icon: QrCode },
-      { title: "Scanner", href: "/admin/scanner", icon: ScanLine },
+      { title: "Scanner", href: "/staff/scanner", icon: ScanLine },
       { title: "Students", href: "/admin/students", icon: Users },
       { title: "Deposits", href: "/admin/deposits", icon: Banknote },
       { title: "Bazaar & Rate", href: "/admin/bazaar", icon: DollarSign },
@@ -99,9 +99,9 @@ const staffNavGroups = [
   {
     label: "Operations",
     items: [
-      { title: "Scanner", href: "/admin/scanner", icon: ScanLine },
+      { title: "Scanner", href: "/staff/scanner", icon: ScanLine },
       { title: "Parcel Check-in", href: "/staff/parcel-checkin", icon: Package },
-      { title: "Scan Monitor", href: "/admin/scan-logs", icon: Activity },
+      { title: "Scan Monitor", href: "/staff/scan-logs", icon: Activity },
     ],
   },
 ]
