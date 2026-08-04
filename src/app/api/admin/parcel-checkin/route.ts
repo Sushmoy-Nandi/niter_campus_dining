@@ -112,6 +112,7 @@ export async function POST(req: NextRequest) {
         const isSuspended = autoOff && !(schedule && schedule.adminOverride)
 
         if (isSuspended) {
+          await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_AUTO_OFF`, details: `Auto-off: ${reason}` }})
           results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "error", message: `Auto-off: ${reason}` })
           triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "AUTO-OFF", reason });
           continue
@@ -120,11 +121,13 @@ export async function POST(req: NextRequest) {
         // Check meal schedule
         if (schedule) {
           if (currentMeal === "lunch" && !schedule.lunch) {
+            await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_LUNCH_${todayStr}`, details: `Lunch turned OFF` }})
             results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "error", message: "Lunch turned OFF" })
             triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "FAILED", reason: "Lunch turned OFF" });
             continue
           }
           if (currentMeal === "dinner" && !schedule.dinner) {
+            await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_DINNER_${todayStr}`, details: `Dinner turned OFF` }})
             results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "error", message: "Dinner turned OFF" })
             triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "FAILED", reason: "Dinner turned OFF" });
             continue
@@ -142,6 +145,8 @@ export async function POST(req: NextRequest) {
         const scanTime = new Date(existingScan.createdAt).toLocaleTimeString("en-US", {
           timeZone: "Asia/Dhaka", hour: "numeric", minute: "2-digit", hour12: true
         })
+        const detailsMsg = `Double scan attempt (previously checked in for parcel delivery at ${scanTime})`
+        await prisma.auditLog.create({ data: { studentId: student.id, action: `FAILED_SCAN_${currentMeal.toUpperCase()}_${todayStr}`, details: detailsMsg }})
         results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "error", message: `Already checked in at ${scanTime}` })
         triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "DOUBLE SCAN", reason: `Previously checked in at ${scanTime}` });
         continue
