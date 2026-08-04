@@ -187,7 +187,7 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
 
         {isCameraActive ? (
           <div className="flex flex-col items-center space-y-4">
-            <div className="relative rounded-lg overflow-hidden border bg-black max-w-sm w-full aspect-video">
+            <div className="relative rounded-lg overflow-hidden border bg-black max-w-sm w-full aspect-square sm:aspect-video">
               <video 
                 ref={videoRef} 
                 autoPlay 
@@ -202,8 +202,8 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
                   </span>
                 )}
               </div>
-              <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
-                <span className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse">
+              <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none px-4">
+                <span className="bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg animate-pulse inline-block">
                   {instruction}
                 </span>
               </div>
