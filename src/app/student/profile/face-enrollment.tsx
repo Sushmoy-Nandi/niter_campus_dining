@@ -40,19 +40,22 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } } 
+      })
       setIsCameraActive(true)
       captureStageRef.current = "CENTER"
       setInstruction("Look directly at the camera")
       setProgress({ center: false, left: false, right: false })
       centerDescriptorRef.current = null
       
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.onloadeddata = () => {
           startDetectionLoop()
         }
-      }, 100)
+        await videoRef.current.play().catch(() => {})
+      }
     } catch (err) {
       console.error(err)
       toast.error("Please grant camera permissions to register your face.")
@@ -62,11 +65,14 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
   const stopCamera = () => {
     if (requestRef.current) cancelAnimationFrame(requestRef.current)
     captureStageRef.current = "IDLE"
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream
-      stream.getTracks().forEach(track => track.stop())
-      videoRef.current.srcObject = null
-      setIsCameraActive(false)
+    if (videoRef.current) {
+      videoRef.current.onloadeddata = null
+      if (videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream
+        stream.getTracks().forEach(track => track.stop())
+        videoRef.current.srcObject = null
+        setIsCameraActive(false)
+      }
     }
   }
 
