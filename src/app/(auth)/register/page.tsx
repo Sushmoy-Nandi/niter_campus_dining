@@ -33,6 +33,7 @@ export default function RegisterPage() {
     whatsapp: "",
     department: "",
     session: "",
+    gender: "",
     password: "",
     confirmPassword: "",
   })
@@ -63,6 +64,7 @@ export default function RegisterPage() {
         whatsapp: formData.whatsapp,
         department: formData.department,
         session: formData.session,
+        gender: formData.gender,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
       }),
@@ -175,6 +177,21 @@ export default function RegisterPage() {
               </SelectContent>
             </Select>
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="gender">Gender</Label>
+          <Select
+            value={formData.gender}
+            onValueChange={(value) => setFormData({ ...formData, gender: value ?? "" })}
+          >
+            <SelectTrigger className="h-10! w-full">
+              <SelectValue placeholder="Select Gender" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="MALE">Male</SelectItem>
+              <SelectItem value="FEMALE">Female</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">

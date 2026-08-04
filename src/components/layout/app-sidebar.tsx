@@ -34,6 +34,7 @@ import {
   ScanLine,
   Activity,
   QrCode,
+  Package,
 } from "lucide-react"
 import { APP_NAME } from "@/lib/constants"
 
@@ -99,6 +100,7 @@ const staffNavGroups = [
     label: "Operations",
     items: [
       { title: "Scanner", href: "/admin/scanner", icon: ScanLine },
+      { title: "Parcel Check-in", href: "/staff/parcel-checkin", icon: Package },
       { title: "Scan Monitor", href: "/admin/scan-logs", icon: Activity },
     ],
   },

@@ -97,6 +97,7 @@ model Student {
   email      String   @unique
   department String
   session    String
+  gender     String?
   isActive   Boolean  @default(true)
   userId     String   @unique
   whatsapp   String?

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { studentId, name, email, department, session, whatsapp, password } = validated.data
+    const { studentId, name, email, department, session, gender, whatsapp, password } = validated.data
 
     const existingUser = await prisma.user.findUnique({ where: { email } })
     if (existingUser) {
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       })
 
       const student = await tx.student.create({
-        data: { studentId, diningId, name, email, department, session, whatsapp, userId: user.id },
+        data: { studentId, diningId, name, email, department, session, gender, whatsapp, userId: user.id },
       })
 
       await tx.wallet.create({
