@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2, Package, CheckCircle2, XCircle, Search, ArrowLeft } from "lucide-react"
 import { toast } from "sonner"
 
@@ -31,12 +30,11 @@ export default function ParcelCheckinPage() {
   const router = useRouter()
 
   const [students, setStudents] = useState<Student[]>([])
-  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [searchQuery, setSearchQuery] = useState("")
   const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
-  const [results, setResults] = useState<CheckInResult[] | null>(null)
-  const [mealInfo, setMealInfo] = useState<string | null>(null)
+  
+  const [individualLoading, setIndividualLoading] = useState<Record<string, boolean>>({})
+  const [individualResults, setIndividualResults] = useState<Record<string, CheckInResult>>({})
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -74,52 +72,29 @@ export default function ParcelCheckinPage() {
            s.department.toLowerCase().includes(q)
   })
 
-  const toggleStudent = (id: string) => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  const toggleAll = () => {
-    if (selected.size === filtered.length) {
-      setSelected(new Set())
-    } else {
-      setSelected(new Set(filtered.map(s => s.id)))
-    }
-  }
-
-  const handleSubmit = async () => {
-    if (selected.size === 0) {
-      toast.error("No students selected")
-      return
-    }
-
-    setSubmitting(true)
+  const handleIndividualSubmit = async (id: string) => {
+    setIndividualLoading(prev => ({ ...prev, [id]: true }))
     try {
       const res = await fetch("/api/admin/parcel-checkin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentIds: Array.from(selected) })
+        body: JSON.stringify({ studentIds: [id] })
       })
-
       const data = await res.json()
-
-      if (res.ok) {
-        setResults(data.results)
-        setMealInfo(data.meal)
-        setSelected(new Set())
-        const successCount = data.results.filter((r: CheckInResult) => r.status === "success").length
-        toast.success(`${successCount} students checked in successfully!`)
+      if (res.ok && data.results && data.results.length > 0) {
+        setIndividualResults(prev => ({ ...prev, [id]: data.results[0] }))
+        if (data.results[0].status === "success") {
+          toast.success(data.results[0].message)
+        } else {
+          toast.error(data.results[0].message)
+        }
       } else {
         toast.error(data.error || "Failed to check in")
       }
     } catch {
       toast.error("Network error")
     } finally {
-      setSubmitting(false)
+      setIndividualLoading(prev => ({ ...prev, [id]: false }))
     }
   }
 
@@ -143,142 +118,84 @@ export default function ParcelCheckinPage() {
             Parcel Check-in
           </h1>
           <p className="text-muted-foreground text-sm">
-            Bulk check-in for hostel food delivery (Female students only)
+            Individual check-in for hostel food delivery (Female students only)
           </p>
         </div>
       </div>
 
-      {/* Results */}
-      {results && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">
-              Check-in Results — {mealInfo?.toUpperCase()}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 max-h-[300px] overflow-y-auto">
-            {results.map((r, i) => (
-              <div key={i} className={`flex items-center gap-3 p-3 rounded-lg text-sm ${
-                r.status === "success" ? "bg-green-50 dark:bg-green-950/30" : "bg-red-50 dark:bg-red-950/30"
-              }`}>
-                {r.status === "success" ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                ) : (
-                  <XCircle className="h-5 w-5 text-red-600 shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{r.name}</p>
-                  <p className="text-xs text-muted-foreground">{r.diningId}</p>
-                </div>
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                  r.status === "success" 
-                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
-                    : "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                }`}>
-                  {r.message}
-                </span>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <CardTitle className="text-lg">Select Students</CardTitle>
+              <CardDescription>
+                {students.length} female students registered
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search name or ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9"
+                />
               </div>
-            ))}
-            <Button variant="outline" className="w-full mt-2" onClick={() => setResults(null)}>
-              Back to Selection
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Selection */}
-      {!results && (
-        <>
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <CardTitle className="text-lg">Select Students</CardTitle>
-                  <CardDescription>
-                    {students.length} female students registered
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1 sm:w-64">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search name or ID..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-9 h-9"
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Select All */}
-              <div className="flex items-center justify-between py-2 px-3 mb-2 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={filtered.length > 0 && selected.size === filtered.length}
-                    onCheckedChange={toggleAll}
-                  />
-                  <span className="text-sm font-medium">
-                    {selected.size === filtered.length && filtered.length > 0 ? "Deselect All" : "Select All"}
-                  </span>
-                </div>
-                <span className="text-sm text-muted-foreground font-semibold">
-                  {selected.size} selected
-                </span>
-              </div>
-
-              {/* Student List */}
-              <div className="space-y-1 max-h-[400px] overflow-y-auto">
-                {filtered.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    {searchQuery ? "No students match your search" : "No female students registered yet"}
-                  </p>
-                ) : (
-                  filtered.map(s => (
-                    <div
-                      key={s.id}
-                      onClick={() => toggleStudent(s.id)}
-                      className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                        selected.has(s.id) 
-                          ? "bg-primary/10 border border-primary/30" 
-                          : "hover:bg-muted/50"
-                      }`}
-                    >
-                      <Checkbox checked={selected.has(s.id)} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{s.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {s.diningId} • {s.department} • {s.session}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Submit Button */}
-          <Button
-            className="w-full h-14 text-lg font-bold"
-            disabled={selected.size === 0 || submitting}
-            onClick={handleSubmit}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                Processing...
-              </>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* Student List */}
+          <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+            {filtered.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                {searchQuery ? "No students match your search" : "No female students registered yet"}
+              </p>
             ) : (
-              <>
-                <Package className="h-5 w-5 mr-2" />
-                Check In {selected.size} Student{selected.size !== 1 ? "s" : ""}
-              </>
+              filtered.map(s => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex-1 min-w-0 pr-4">
+                    <p className="font-medium text-sm truncate">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {s.diningId} • {s.department} • {s.session}
+                    </p>
+                    {individualResults[s.id] && individualResults[s.id].status === "error" && (
+                      <p className="text-xs text-red-500 mt-1">{individualResults[s.id].message}</p>
+                    )}
+                  </div>
+                  
+                  {individualResults[s.id] && individualResults[s.id].status === "success" ? (
+                    <div className="flex items-center gap-1.5 text-green-600 dark:text-green-500 bg-green-50 dark:bg-green-950/30 px-3 py-1.5 rounded-full text-xs font-medium shrink-0">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Checked In
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={individualResults[s.id] && individualResults[s.id].status === "error" ? "outline" : "default"}
+                      className={individualResults[s.id] && individualResults[s.id].status === "error" ? "border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700" : ""}
+                      onClick={() => handleIndividualSubmit(s.id)}
+                      disabled={individualLoading[s.id] || (individualResults[s.id]?.status === "success")}
+                    >
+                      {individualLoading[s.id] ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : individualResults[s.id] && individualResults[s.id].status === "error" ? (
+                        "Retry"
+                      ) : (
+                        "Check In"
+                      )}
+                    </Button>
+                  )}
+                </div>
+              ))
             )}
-          </Button>
-        </>
-      )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

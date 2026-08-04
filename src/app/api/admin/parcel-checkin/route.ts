@@ -3,6 +3,25 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { isStudentAutoOff, getStudentPeriodDeposit } from "@/lib/meal-utils"
 
+// A custom webhook caller just for appending logs to the Google Sheet
+async function triggerGoogleSheetAppend(logData: any) {
+  const syncUrl = process.env.GOOGLE_SCRIPT_SCAN_LOG_URL;
+  if (!syncUrl) return;
+
+  try {
+    fetch(syncUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        action: "appendScanLog",
+        data: logData
+      }),
+    }).catch(e => console.error("Live sheet append fetch error", e));
+  } catch (error) {
+    console.error("Live sheet append error", error);
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const session = await auth()
@@ -91,6 +110,7 @@ export async function POST(req: NextRequest) {
 
         if (isSuspended) {
           results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "error", message: `Auto-off: ${reason}` })
+          triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "AUTO-OFF", reason });
           continue
         }
 
@@ -98,10 +118,12 @@ export async function POST(req: NextRequest) {
         if (schedule) {
           if (currentMeal === "lunch" && !schedule.lunch) {
             results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "error", message: "Lunch turned OFF" })
+            triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "FAILED", reason: "Lunch turned OFF" });
             continue
           }
           if (currentMeal === "dinner" && !schedule.dinner) {
             results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "error", message: "Dinner turned OFF" })
+            triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "FAILED", reason: "Dinner turned OFF" });
             continue
           }
         }
@@ -118,6 +140,7 @@ export async function POST(req: NextRequest) {
           timeZone: "Asia/Dhaka", hour: "numeric", minute: "2-digit", hour12: true
         })
         results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "error", message: `Already checked in at ${scanTime}` })
+        triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "DOUBLE SCAN", reason: `Previously checked in at ${scanTime}` });
         continue
       }
 
@@ -131,6 +154,7 @@ export async function POST(req: NextRequest) {
       })
 
       results.push({ studentId: sid, name: student.name, diningId: student.diningId, status: "success", message: `${currentMeal} parcel checked in` })
+      triggerGoogleSheetAppend({ time: bdtString, name: student.name, diningId: student.diningId, department: student.department, meal: currentMeal.toUpperCase(), status: "SUCCESS", reason: `Parcel check-in` });
     }
 
     const successCount = results.filter(r => r.status === "success").length
