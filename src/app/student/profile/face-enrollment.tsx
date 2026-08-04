@@ -49,13 +49,16 @@ export function FaceEnrollment({ hasFaceRegistered }: { hasFaceRegistered: boole
       setProgress({ center: false, left: false, right: false })
       centerDescriptorRef.current = null
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.onloadeddata = () => {
-          startDetectionLoop()
+      // Wait for React to render the video element
+      setTimeout(async () => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          videoRef.current.onloadeddata = () => {
+            startDetectionLoop()
+          }
+          await videoRef.current.play().catch(() => {})
         }
-        await videoRef.current.play().catch(() => {})
-      }
+      }, 100)
     } catch (err) {
       console.error(err)
       toast.error("Please grant camera permissions to register your face.")
