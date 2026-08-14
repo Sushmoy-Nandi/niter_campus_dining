@@ -43,7 +43,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     const { id } = await params
 
-    const student = await prisma.student.findUnique({
+    const student = await prisma.student.findFirst({
       where: { OR: [{ id }, { studentId: id }] },
       select: { userId: true },
     })
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
-    const student = await prisma.student.findUnique({
+    const student = await prisma.student.findFirst({
       where: { OR: [{ id }, { studentId: id }] },
       include: {
         wallet: true,
