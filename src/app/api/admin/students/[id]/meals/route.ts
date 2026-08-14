@@ -21,9 +21,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const mealDate = new Date(date)
     mealDate.setUTCHours(0, 0, 0, 0)
 
+    const student = await prisma.student.findFirst({ where: { OR: [{ id }, { studentId: studentCuid }] } });
+    if (!student) return NextResponse.json({ error: "Student not found" }, { status: 404 });
+    const studentCuid = student.id;
+
     const schedule = await prisma.mealSchedule.upsert({
       where: {
-        studentId_date: { studentId: id, date: mealDate },
+        studentId_date: { studentId: studentCuid, date: mealDate },
       },
       update: {
         lunch: lunch ?? true,
@@ -31,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         adminOverride: true,
       },
       create: {
-        studentId: id,
+        studentId: studentCuid,
         date: mealDate,
         lunch: lunch ?? true,
         dinner: dinner ?? true,

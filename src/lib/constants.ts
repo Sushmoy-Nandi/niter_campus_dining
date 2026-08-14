@@ -3,4 +3,4 @@ export const APP_DESCRIPTION = "Meal Management System for National Institute of
 export const LOW_BALANCE_THRESHOLD = 3000
 export const MEAL_CHANGE_CUTOFF_HOUR = 10
 export const BDT_SYMBOL = "BDT"
-export const NITER_WEBSITE = "https://niter.edu.bd"
+export const NITER_WEBSITE = "https://example.com"

@@ -90,15 +90,15 @@ export function AppNavbar() {
         </Button>
 
         <DropdownMenu>
-          <DropdownMenuTrigger className={cn("outline-none")}>
-            <div className="relative h-8 w-8 cursor-pointer rounded-full ring-2 ring-primary/20 transition-shadow hover:ring-primary/40">
+          <DropdownMenuTrigger asChild>
+            <button className="outline-none border-none bg-transparent p-0 m-0 relative h-8 w-8 cursor-pointer rounded-full ring-2 ring-primary/20 transition-shadow hover:ring-primary/40">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={session?.user?.image || undefined} />
                 <AvatarFallback className="bg-gradient-to-br from-primary to-teal-600 text-primary-foreground text-xs">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-            </div>
+            </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-60" align="end">
             <div className="px-2 py-1.5 font-normal">

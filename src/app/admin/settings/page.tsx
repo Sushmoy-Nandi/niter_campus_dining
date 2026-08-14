@@ -300,7 +300,7 @@ export default function AdminSettings() {
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <Label>Email</Label>
-                <Input type="email" placeholder="staff@niter.edu.bd" value={staffEmail} onChange={e => setStaffEmail(e.target.value)} />
+                <Input type="email" placeholder="staff@example.com" value={staffEmail} onChange={e => setStaffEmail(e.target.value)} />
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <Label>Password</Label>

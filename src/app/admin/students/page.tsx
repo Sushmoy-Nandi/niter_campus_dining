@@ -220,7 +220,7 @@ export default function AdminStudents() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right flex items-center justify-end gap-2">
-                      <Link href={`/admin/students/${s.id}`}>
+                      <Link href={`/admin/students/${s.studentId}`}>
                         <Button variant="outline" size="sm">View</Button>
                       </Link>
                       <Button variant="ghost" size="sm" onClick={() => handleToggleActive(s.id, s.isActive)}>

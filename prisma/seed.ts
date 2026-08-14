@@ -21,11 +21,11 @@ async function main() {
   })
 
   await prisma.admin.upsert({
-    where: { email: "admin@niter.edu.bd" },
+    where: { email: "admin@example.com" },
     update: {},
     create: {
       name: "System Admin",
-      email: "admin@niter.edu.bd",
+      email: "admin@example.com",
       userId: adminUser.id,
     },
   })
@@ -46,10 +46,10 @@ async function main() {
 
   for (const student of students) {
     const user = await prisma.user.upsert({
-      where: { email: `${student.studentId}@niter.edu.bd` },
+      where: { email: `${student.studentId}@example.com` },
       update: {},
       create: {
-        email: `${student.studentId}@niter.edu.bd`,
+        email: `${student.studentId}@example.com`,
         name: student.name,
         passwordHash: studentPassword,
         role: "STUDENT",
@@ -62,7 +62,7 @@ async function main() {
       create: {
         studentId: student.studentId,
         name: student.name,
-        email: `${student.studentId}@niter.edu.bd`,
+        email: `${student.studentId}@example.com`,
         department: student.department,
         session: student.session,
         userId: user.id,

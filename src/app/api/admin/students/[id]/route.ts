@@ -14,7 +14,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json()
 
     const student = await prisma.student.update({
-      where: { id },
+      where: { OR: [{ id }, { studentId: id }] },
       data: {
         name: body.name,
         email: body.email,
@@ -41,7 +41,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     const { id } = await params
 
     const student = await prisma.student.findUnique({
-      where: { id },
+      where: { OR: [{ id }, { studentId: id }] },
       select: { userId: true },
     })
 
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     const student = await prisma.student.findUnique({
-      where: { id },
+      where: { OR: [{ id }, { studentId: id }] },
       include: {
         wallet: true,
         transactions: {
