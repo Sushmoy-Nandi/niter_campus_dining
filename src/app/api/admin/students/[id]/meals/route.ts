@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const mealDate = new Date(date)
     mealDate.setUTCHours(0, 0, 0, 0)
 
-    const student = await prisma.student.findFirst({ where: { OR: [{ id }, { studentId: studentCuid }] } });
+    const student = await prisma.student.findFirst({ where: { OR: [{ id }, { studentId: id }] } });
     if (!student) return NextResponse.json({ error: "Student not found" }, { status: 404 });
     const studentCuid = student.id;
 
