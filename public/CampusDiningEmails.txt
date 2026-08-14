@@ -1,0 +1,21 @@
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const to = data.to;
+    const subject = data.subject;
+    const htmlBody = data.htmlBody;
+    const plainBody = data.plainBody || htmlBody; 
+    
+    // Send the email from the logged-in Gmail account
+    GmailApp.sendEmail(to, subject, plainBody, {
+      htmlBody: htmlBody,
+      name: "Campus Dining System"
+    });
+    
+    return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Email sent" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}

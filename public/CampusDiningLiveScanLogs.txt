@@ -1,0 +1,39 @@
+// A simple security secret. You can change this to anything you want.
+var SECRET_KEY = "YourSecretKeyHere"; 
+
+function doPost(e) {
+  try {
+    var payload = JSON.parse(e.postData.contents);
+    
+    // Optional: Check if the request contains the right secret (if you want to add security later)
+    // if (payload.secret !== SECRET_KEY) {
+    //   return ContentService.createTextOutput("Unauthorized").setStatusCode(401);
+    // }
+
+    if (payload.action === 'appendScanLog') {
+      var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Scan Logs");
+      
+      // If the sheet doesn't exist, create it and set up headers
+      if (!sheet) {
+        sheet = SpreadsheetApp.getActiveSpreadsheet().insertSheet("Scan Logs");
+        sheet.appendRow(["Time", "Name", "Dining ID", "Department", "Meal", "Status", "Reason"]);
+        sheet.getRange("A1:G1").setFontWeight("bold").setBackground("#e0e0e0");
+      }
+      
+      var d = payload.data;
+      
+      // Add the scan log to the bottom of the sheet
+      sheet.appendRow([d.time, d.name, d.diningId, d.department, d.meal, d.status, d.reason]);
+      
+      return ContentService.createTextOutput(JSON.stringify({ success: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ error: "Invalid Action" }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
