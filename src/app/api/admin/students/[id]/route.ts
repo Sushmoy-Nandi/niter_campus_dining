@@ -13,8 +13,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params
     const body = await req.json()
 
+    const existingStudent = await prisma.student.findFirst({ where: { OR: [{ id }, { studentId: id }] } });
+    if (!existingStudent) return NextResponse.json({ error: "Student not found" }, { status: 404 });
+
     const student = await prisma.student.update({
-      where: { OR: [{ id }, { studentId: id }] },
+      where: { id: existingStudent.id },
       data: {
         name: body.name,
         email: body.email,
